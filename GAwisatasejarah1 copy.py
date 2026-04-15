@@ -4,7 +4,9 @@ import random
 import time
 import ast
 import folium
+import os
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # =====================================================================
 # BLOK 1: PERSIAPAN DATA (FULL REAL DISTANCE)
 # =====================================================================
@@ -15,7 +17,7 @@ print("==========================================================")
 print("Loading data asli jalan raya...")
 
 try:
-    df_label = pd.read_csv('daftar_tempat_full.csv')
+    df_label = pd.read_csv(os.path.join(BASE_DIR, 'daftar_tempat_full.csv'))
     daftar_tempat = df_label['Nama Tempat'].tolist()
     jumlah_tempat = len(daftar_tempat)
 except FileNotFoundError:
@@ -23,7 +25,7 @@ except FileNotFoundError:
     exit()
 
 try:
-    distance_matrix = np.load('matriks_full_sby_smg.npy')
+    distance_matrix = np.load(os.path.join(BASE_DIR, 'matriks_full_sby_smg.npy'))
 except FileNotFoundError:
     print("❌ ERROR: File 'matriks_full_sby_smg.npy' tidak ditemukan!")
     exit()
@@ -145,7 +147,7 @@ import requests
 print("\n⏳ Sedang mengunduh jalur jalan raya asli dan membuat peta...")
 
 # 1. Mengambil data koordinat dari dataset asli
-df_asli = pd.read_csv('wisata_budaya.csv')
+df_asli = pd.read_csv(os.path.join(BASE_DIR, 'wisata_budaya.csv'))
 koordinat_list = []
 
 for nama_lengkap in daftar_tempat:
