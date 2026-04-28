@@ -4,7 +4,7 @@ Place_Id,Place_Name,City,Coordinate,Opening_Hours,Closing_Hours,Visit_Duration
 3,Museum De Javasche Bank,Surabaya,"{'lat': -7.2353939, 'lng': 112.7367646}",08:00,16:00,60
 4,Klenteng Sanggar Agung,Surabaya,"{'lat': -7.246944, 'lng': 112.802222}",07:00,20:00,60
 5,Monumen Tugu Pahlawan,Surabaya,"{'lat': -7.246925999999999, 'lng': 112.73781}",08:00,16:00,60
-6,Monumen Jalesveva Jayamahe,Surabaya,"{'lat': -7.195474799999999, 'lng': 112.7395206}",08:00,15:00,60
+6,Monumen Jalesveva Jayamahe,Surabaya,"{'lat': -7.196464, 'lng': 112.741138}",08:00,15:00,60
 7,Patung Sura dan Buaya,Surabaya,"{'lat': -7.296049199999999, 'lng': 112.7387012}",00:00,23:59,30
 8,Monumen Bambu Runcing Surabaya,Surabaya,"{'lat': -7.267775500000001, 'lng': 112.7443898}",00:00,23:59,30
 9,Museum Mpu Tantular,Sidoarjo,"{'lat': -7.4333832, 'lng': 112.7198449}",08:00,15:00,90
