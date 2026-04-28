@@ -4,6 +4,8 @@ import ast
 import folium
 import os
 import requests
+import datetime
+import json
 
 from ga_v1 import GeneticAlgorithm
 from ga_v2 import TournamentGA
@@ -13,7 +15,7 @@ from ga_v4 import AdaptiveGA
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 print("==========================================================")
-print("  MULTI-VERSION GA ROUTE PLANNING")
+print("  MULTI-VERSION GA - TRAVEL ITINERARY PLANNER")
 print("==========================================================")
 
 # 1. Load Data
@@ -24,22 +26,25 @@ except FileNotFoundError as e:
     print(f"❌ ERROR: File data tidak ditemukan! ({e})")
     exit()
 
-# 2. Daftar Algoritma
+# 2. Inisialisasi Algoritma
 algos = [
-    GeneticAlgorithm("Versi 1 (Klasik)", distance_matrix),
-    TournamentGA("Versi 2 (Tournament Selection)", distance_matrix),
-    AdvancedMutationGA("Versi 3 (Inversion Mut)", distance_matrix),
-    AdaptiveGA("Versi 4 (Adaptive Rate)", distance_matrix)
+    GeneticAlgorithm("Versi 1 (Klasik)", df_lokasi, distance_matrix),
+    TournamentGA("Versi 2 (Tournament Selection)", df_lokasi, distance_matrix),
+    AdvancedMutationGA("Versi 3 (Inversion Mut)", df_lokasi, distance_matrix),
+    AdaptiveGA("Versi 4 (Adaptive Rate)", df_lokasi, distance_matrix)
 ]
 
-results = {}
-for algo in algos:
-    route, dist = algo.run()
-    results[algo.name] = (route, dist)
-    print(f"   ✅ {algo.name} Selesai. Total Jarak: {dist:.2f} km\n")
+results_data = {} 
+results_meta = {}
 
-# 3. Visualisasi Peta
-print("⏳ Membuat Peta Interaktif dengan Rute Jalan Raya Presisi (Mohon tunggu beberapa saat)...")
+for algo in algos:
+    route, dist, itinerary, days = algo.run()
+    results_data[algo.name] = itinerary
+    results_meta[algo.name] = f"{dist:.2f} km"
+    print(f"   ✅ {algo.name} | Jarak: {dist:.2f} km | Waktu: {days} Hari\n")
+
+# 3. Persiapan Peta
+print("⏳ Membuat Peta Interaktif dengan Jadwal Dinamis...")
 peta = folium.Map(location=[-7.6, 112.5], zoom_start=9)
 
 colors = ['#118AB2', '#EF476F', '#FFD166', '#06D6A0']
@@ -49,43 +54,48 @@ warna_kota = {
     'Mojokerto': ('#388e3c', '#c8e6c9'), 
     'Malang': ('#f57c00', '#ffe0b2')     
 }
+# =====================================
 
 koordinat_list = []
 for coord_str in df_lokasi['Coordinate']:
     c = ast.literal_eval(coord_str)
     koordinat_list.append((c['lat'], c['lng']))
 
-for i, (name, (rute, dist)) in enumerate(results.items()):
-    fg = folium.FeatureGroup(name=f"{name} ({dist:.2f} km)")
+layer_mapping = {}
+
+# 4. Generate Layer untuk setiap Versi
+for i, (name, itinerary) in enumerate(results_data.items()):
+    dist_str = results_meta[name]
+    layer_name = f"{name} ({dist_str})"
+    layer_mapping[layer_name] = name 
+    
+    fg = folium.FeatureGroup(name=layer_name)
+    
+    rute = []
+    for item in itinerary:
+        idx = df_lokasi[df_lokasi['Place_Name'] == item['place']].index[0]
+        rute.append(idx)
     
     rute_coords = [koordinat_list[idx] for idx in rute]
     rute_coords.append(rute_coords[0]) 
-    
-    # Array untuk menampung koordinat geometri utuh
+
+    # --- Gambar Garis Presisi (OSRM) ---
     full_route_geometry = []
-    
-    # Minta rute OSRM secara titik-ke-titik agar presisi dan tidak ditolak server
     for j in range(len(rute_coords) - 1):
         lat1, lon1 = rute_coords[j]
         lat2, lon2 = rute_coords[j+1]
-        
         url = f"http://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?geometries=geojson&overview=full"
-        
         try:
             res = requests.get(url).json()
             if res['code'] == 'Ok':
                 coords = res['routes'][0]['geometry']['coordinates']
-                # OSRM merespon dengan [lon, lat], Folium butuh [lat, lon]
                 full_route_geometry.extend([[c[1], c[0]] for c in coords])
-            else:
-                full_route_geometry.extend([[lat1, lon1], [lat2, lon2]])
-        except:
-            full_route_geometry.extend([[lat1, lon1], [lat2, lon2]])
+            else: full_route_geometry.extend([[lat1, lon1], [lat2, lon2]])
+        except: full_route_geometry.extend([[lat1, lon1], [lat2, lon2]])
             
-    # Gambar garis utuh yang sudah menempel di jalan raya
     folium.PolyLine(full_route_geometry, color=colors[i], weight=5, opacity=0.8).add_to(fg)
 
-    # Tambahkan Marker dengan Nomor Urutan
+    # --- Tambahkan Marker Angka Urutan ---
     for urutan, indeks_tempat in enumerate(rute):
         lat, lng = koordinat_list[indeks_tempat]
         nama_tempat = df_lokasi.iloc[indeks_tempat]['Place_Name']
@@ -95,28 +105,91 @@ for i, (name, (rute, dist)) in enumerate(results.items()):
         
         icon_angka = folium.DivIcon(
             html=f'''
-            <div style="
-                font-size: 10pt; font-weight: bold; color: black; 
-                background-color: {warna_kota_fill}; 
-                border: 3px solid {colors[i]}; 
-                border-radius: 50%; text-align: center; 
-                line-height: 24px; width: 25px; height: 25px;
-                box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
-            ">
+            <div style="font-size: 10pt; font-weight: bold; color: black; 
+                background-color: {warna_kota_fill}; border: 3px solid {colors[i]}; 
+                border-radius: 50%; text-align: center; line-height: 24px; 
+                width: 25px; height: 25px; box-shadow: 2px 2px 5px rgba(0,0,0,0.5);">
                 {urutan + 1}
-            </div>
-            '''
+            </div>'''
         )
-        
         folium.Marker(
-            location=[lat, lng],
-            popup=f"<b>{name}</b><br>Urutan ke-{urutan+1}: {nama_tempat}",
+            location=[lat, lng], 
+            popup=f"<b>{name}</b><br>Urutan ke-{urutan+1}: {nama_tempat}", 
             icon=icon_angka
         ).add_to(fg)
         
     fg.add_to(peta)
 
-folium.LayerControl(collapsed=False).add_to(peta)
-peta.save("Perbandingan_Rute_GA.html")
+# Pindahkan Layer Control ke Kiri Atas
+folium.LayerControl(position='topleft', collapsed=False).add_to(peta)
+
+# 5. Injeksi Panel HTML & JavaScript
+itinerary_panel = """
+<div id="itinerary-panel" style="position: fixed; top: 10px; right: 10px; width: 330px; height: 90vh; 
+    background: white; z-index: 9999; overflow-y: auto; padding: 15px; 
+    border-radius: 10px; box-shadow: 2px 2px 10px rgba(0,0,0,0.5); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <h3 style="margin-top:0; color:#333; text-align:center;">Jadwal Perjalanan</h3>
+    <div id="itinerary-content">
+        <p style="text-align:center; color:#888; margin-top:50px;">Pilih salah satu versi GA di sebelah kiri untuk melihat detail jadwal.</p>
+    </div>
+</div>
+"""
+peta.get_root().html.add_child(folium.Element(itinerary_panel))
+
+data_json = json.dumps(results_data)
+mapping_json = json.dumps(layer_mapping)
+
+script_js = f"""
+<script>
+document.addEventListener('DOMContentLoaded', function() {{
+    var dataItin = {data_json};
+    var nameMapping = {mapping_json};
+    var contentDiv = document.getElementById('itinerary-content');
+
+    function renderItinerary(versionName) {{
+        var items = dataItin[versionName];
+        var html = '<h4 style="text-align:center; color:#118AB2; margin-bottom:5px;">' + versionName + '</h4><hr>';
+        var currentDay = 0;
+
+        items.forEach(function(item) {{
+            if (item.day !== currentDay) {{
+                currentDay = item.day;
+                html += '<h5 style="background:#118AB2; color:white; padding:5px; border-radius:5px; margin-top:15px;">Hari ' + currentDay + ' - ' + item.city + '</h5>';
+            }}
+            html += '<div style="margin-bottom: 8px; font-size: 12px; border-left: 3px solid #EF476F; padding-left: 8px;">';
+            html += '<b>' + item.arrive + ' - ' + item.depart + '</b><br>';
+            html += '<span style="color:#222;">' + item.place + '</span><br>';
+            html += '<span style="color:#777; font-size:10px;">Durasi: ' + item.duration + ' mnt</span>';
+            html += '</div>';
+        }});
+        contentDiv.innerHTML = html;
+    }}
+
+    var map_instance = null;
+    for (var key in window) {{
+        if (key.startsWith('map_') && window[key] instanceof L.Map) {{
+            map_instance = window[key];
+            break;
+        }}
+    }}
+
+    if (map_instance) {{
+        map_instance.on('overlayadd', function(e) {{
+            var realVersionName = nameMapping[e.name];
+            if (realVersionName) {{
+                renderItinerary(realVersionName);
+            }}
+        }});
+    }}
+}});
+</script>
+"""
+peta.get_root().html.add_child(folium.Element(script_js))
+
+# 6. Simpan File
+waktu_sekarang = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+nama_file = f"Rute_Wisata_GA_{waktu_sekarang}.html"
+peta.save(nama_file)
+
 print("=" * 58)
-print("✨ SELESAI!.")
+print(f"✨ BERHASIL! File disimpan sebagai '{nama_file}'.")

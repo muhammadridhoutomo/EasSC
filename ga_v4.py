@@ -6,16 +6,18 @@ class AdaptiveGA(GeneticAlgorithm):
         print(f"🚀 Menjalankan {self.name}...")
         pop = self.init_populasi()
         for gen in range(self.generations):
-            # Mutasi adaptif: semakin lama generasi, rate makin kecil
             self.mut_rate = max(0.01, 0.1 * (1 - gen/self.generations))
             
             fit = self.evaluasi(pop)
             best_idx = np.argmax(fit)
-            curr_dist = self.hitung_jarak(pop[best_idx])
             
-            if curr_dist < self.best_distance:
-                self.best_distance = curr_dist
+            if fit[best_idx] > self.best_fitness:
+                self.best_fitness = fit[best_idx]
                 self.best_route = pop[best_idx]
+                _, itin, dist, days = self.hitung_itinerary(self.best_route)
+                self.best_distance = dist
+                self.best_itinerary = itin
+                self.best_days = days
                 
             new_pop = [self.best_route]
             while len(new_pop) < self.pop_size:
@@ -25,8 +27,7 @@ class AdaptiveGA(GeneticAlgorithm):
                 new_pop.append(child)
             pop = new_pop
             
-            # --- TAMBAHAN: Tampilkan ke terminal per 100 generasi ---
             if (gen + 1) % 100 == 0:
-                print(f"      Generasi {gen + 1:<4} | Jarak Terpendek Sementara: {self.best_distance:.2f} km")
+                print(f"      Gen {gen + 1:<4} | Jarak: {self.best_distance:.2f} km | Hari: {self.best_days}")
                 
-        return self.best_route, self.best_distance
+        return self.best_route, self.best_distance, self.best_itinerary, self.best_days
