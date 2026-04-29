@@ -6,6 +6,7 @@ import os
 import requests
 import datetime
 import json
+import random
 
 from ga_v1 import GeneticAlgorithm
 from ga_v2 import TournamentGA
@@ -13,6 +14,10 @@ from ga_v3 import AdvancedMutationGA
 from ga_v4 import AdaptiveGA
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SEED = 42
+
+random.seed(SEED)
+np.random.seed(SEED)
 
 print("==========================================================")
 print("  MULTI-VERSION GA - TRAVEL ITINERARY PLANNER")
