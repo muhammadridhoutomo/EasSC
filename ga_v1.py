@@ -163,6 +163,8 @@ class GeneticAlgorithm:
         print(f"🚀 Menjalankan {self.name}...")
         pop = self.init_populasi()
         
+        self.history = []
+
         for gen in range(self.generations):
             fit = self.evaluasi(pop)
             best_idx = np.argmax(fit)
@@ -182,6 +184,8 @@ class GeneticAlgorithm:
                 child = self.mutation(child)
                 new_pop.append(child)
             pop = new_pop
+            
+            self.history.append(self.best_distance)
             
             if (gen + 1) % 100 == 0:
                 print(f"      Gen {gen + 1:<4} | Jarak: {self.best_distance:.2f} km | Hari: {self.best_days}")

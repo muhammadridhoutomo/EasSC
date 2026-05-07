@@ -7,6 +7,7 @@ import requests
 import datetime
 import json
 import random
+import matplotlib.pyplot as plt
 
 from ga_v1 import GeneticAlgorithm
 from ga_v2 import TournamentGA
@@ -47,6 +48,44 @@ for algo in algos:
     results_data[algo.name] = itinerary
     results_meta[algo.name] = f"{dist:.2f} km"
     print(f"   ✅ {algo.name} | Jarak: {dist:.2f} km | Waktu: {days} Hari\n")
+
+# ====================================================================
+# 3. MEMBUAT GRAFIK KONVERGENSI (BARU)
+# ====================================================================
+print("⏳ Membuat Grafik Konvergensi...")
+plt.figure(figsize=(11, 6)) # Lebarkan sedikit dari 10 ke 11 agar teks di kanan tidak terpotong
+
+warna_grafik = ['#118AB2', '#EF476F', '#FFD166', '#06D6A0']
+
+for i, algo in enumerate(algos):
+    # Plot garisnya
+    plt.plot(algo.history, label=f"{algo.name}", color=warna_grafik[i], linewidth=2)
+    
+    # Ambil nilai jarak terakhir (di generasi ke-1000)
+    nilai_akhir = algo.history[-1]
+    generasi_akhir = len(algo.history) - 1
+    
+    # Menambahkan teks angka persis di ujung kanan garis
+    plt.text(generasi_akhir + 10, nilai_akhir, f'{nilai_akhir:.2f} km', 
+             color=warna_grafik[i], fontsize=10, fontweight='bold', va='center')
+
+plt.title('Grafik Konvergensi Kinerja Genetic Algorithm', fontsize=14, fontweight='bold')
+plt.xlabel('Generasi', fontsize=12)
+plt.ylabel('Total Jarak Tempuh (km)', fontsize=12)
+plt.grid(True, linestyle='--', alpha=0.7)
+
+# Melebarkan batas sumbu X agar ada ruang kosong di sebelah kanan untuk teks angka
+plt.xlim(0, 1150) 
+
+plt.legend(loc='upper right')
+plt.tight_layout()
+
+# Simpan grafik sebagai gambar PNG
+waktu_sekarang = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+nama_file_grafik = f"Grafik_Konvergensi_{waktu_sekarang}.png"
+plt.savefig(nama_file_grafik, dpi=300)
+print(f"✅ Grafik konvergensi berhasil disimpan sebagai '{nama_file_grafik}'\n")
+# ====================================================================
 
 # 3. Persiapan Peta
 print("⏳ Membuat Peta Interaktif dengan Jadwal Dinamis...")

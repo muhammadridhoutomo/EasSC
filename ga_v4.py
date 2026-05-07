@@ -5,6 +5,9 @@ class AdaptiveGA(GeneticAlgorithm):
     def run(self):
         print(f"🚀 Menjalankan {self.name}...")
         pop = self.init_populasi()
+
+        self.history = []
+
         for gen in range(self.generations):
             self.mut_rate = max(0.01, 0.1 * (1 - gen/self.generations))
             
@@ -27,6 +30,8 @@ class AdaptiveGA(GeneticAlgorithm):
                 new_pop.append(child)
             pop = new_pop
             
+            self.history.append(self.best_distance)
+
             if (gen + 1) % 100 == 0:
                 print(f"      Gen {gen + 1:<4} | Jarak: {self.best_distance:.2f} km | Hari: {self.best_days}")
                 
