@@ -47,20 +47,21 @@ if 'results' not in st.session_state:
 def load_data():
     df_new = pd.read_csv(os.path.join(BASE_DIR, 'historical_new.csv'))
     matrix_new = np.load(os.path.join(BASE_DIR, 'matriks_wisata_new.npy'))
-    return df_new, matrix_new
+    dur_matrix_new = np.load(os.path.join(BASE_DIR, 'matriks_durasi_new.npy'))
+    return df_new, matrix_new, dur_matrix_new
 
-df_new, matrix_new = load_data()
+df_new, matrix_new, dur_matrix_new = load_data()
 
 # --- LOGIC: RUN ALGORITHMS ---
 if run_button:
     with st.spinner("Mencari rute paling optimal (500 Iterasi)..."):
         # Jalankan PSO (Generasi dibatasi 500)
-        pso = PSOAlgorithm("Particle Swarm Optimization", df_new, matrix_new, 
+        pso = PSOAlgorithm("Particle Swarm Optimization", df_new, matrix_new, dur_matrix_new,
                           start_city=start_city, max_days=max_days, generations=500)
         _, pso_dist, pso_itin, pso_days = pso.run()
         
         # Jalankan Tabu Search (Iterasi dibatasi 500)
-        tabu = TabuSearch("Tabu Search", df_new, matrix_new, 
+        tabu = TabuSearch("Tabu Search", df_new, matrix_new, dur_matrix_new,
                          start_city=start_city, max_days=max_days, iterations=500)
         _, tabu_dist, tabu_itin, tabu_days = tabu.run()
 
@@ -109,8 +110,10 @@ if st.session_state.results:
 
     rute_coords = []
     for item in itinerary:
-        match = df_new[df_new['Nama Tempat'] == item['place']].iloc[0]
-        rute_coords.append((float(match['Latitude']), float(match['Longitude'])))
+        # Hanya ambil koordinat jika bukan entri mobilisasi
+        if not item.get('is_mobilisasi'):
+            match = df_new[df_new['Nama Tempat'] == item['place']].iloc[0]
+            rute_coords.append((float(match['Latitude']), float(match['Longitude'])))
     
     if rute_coords:
         rute_coords_loop = rute_coords + [rute_coords[0]]
@@ -132,9 +135,12 @@ if st.session_state.results:
         
         folium.PolyLine(full_geometry, color=data_view["color"], weight=5, opacity=0.85).add_to(peta)
 
-        for i in range(len(itinerary)):
+        # Filter itinerary untuk hanya tempat wisata (bukan mobilisasi) untuk marker
+        wisata_only = [item for item in itinerary if not item.get('is_mobilisasi')]
+        
+        for i in range(len(wisata_only)):
             coord = rute_coords[i]
-            item = itinerary[i]
+            item = wisata_only[i]
             fill_color = warna_kota.get(item['city'], ('#616161', '#e0e0e0'))[1]
             icon_html = f'''
                 <div style="font-size: 9pt; font-weight: bold; color: black; background-color: {fill_color}; 

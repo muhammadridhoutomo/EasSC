@@ -3,9 +3,10 @@ import numpy as np
 from ga_v1 import GeneticAlgorithm
 
 class TabuSearch(GeneticAlgorithm):
-    def __init__(self, name, df_lokasi, distance_matrix, start_city='Surabaya', max_days=3, tenure=15, iterations=500):
+    def __init__(self, name, df_lokasi, distance_matrix, duration_matrix, start_city='Surabaya', max_days=3, tenure=15, iterations=500):
         # Gunakan parameter yang konsisten dengan PSO
         super().__init__(name, df_lokasi, distance_matrix)
+        self.dur_matrix = duration_matrix
         self.start_city = start_city
         self.max_days = max_days
         self.tenure = tenure
@@ -44,7 +45,7 @@ class TabuSearch(GeneticAlgorithm):
 
     def hitung_itinerary(self, rute):
         """
-        Logika penjadwalan (Sama persis dengan PSO)
+        Logika penjadwalan dengan menyertakan waktu MOBILISASI antar lokasi.
         """
         current_day = 1
         current_time = 8 * 60 
@@ -57,21 +58,38 @@ class TabuSearch(GeneticAlgorithm):
             if i > 0:
                 travel_dist = self.matrix[rute[i-1]][idx]
                 total_distance += travel_dist
-                travel_time = travel_dist * 1.5 
+                # Gunakan durasi nyata dari OSRM
+                travel_time = self.dur_matrix[rute[i-1]][idx]
+                
+                start_h, start_m = int(current_time//60), int(current_time%60)
+                end_time = current_time + travel_time
+                end_h, end_m = int(end_time//60), int(end_time%60)
+                
+                itinerary.append({
+                    'day': current_day,
+                    'city': kota,
+                    'place': '🚗 Mobilisasi',
+                    'arrive': f"{start_h:02d}:{start_m:02d}",
+                    'depart': f"{end_h:02d}:{end_m:02d}",
+                    'duration': int(travel_time),
+                    'is_mobilisasi': True
+                })
+                current_time = end_time
             else:
                 travel_time = 0
             
-            arrival_time = current_time + travel_time
+            arrival_time = current_time
             if arrival_time < self.open_mins[idx]:
                 arrival_time = self.open_mins[idx]
                 
             finish_time = arrival_time + self.durations[idx]
             
-            # Cek tutup atau batas jam 9 malam
             if finish_time > self.close_mins[idx] or finish_time > 21 * 60:
                 current_day += 1
                 current_time = 8 * 60
                 if current_day > self.max_days:
+                    if itinerary and itinerary[-1].get('is_mobilisasi'):
+                        itinerary.pop()
                     break
                 arrival_time = current_time + 30 
                 if arrival_time < self.open_mins[idx]:
@@ -87,11 +105,12 @@ class TabuSearch(GeneticAlgorithm):
                 'place': self.names[idx],
                 'arrive': f"{arr_h:02d}:{arr_m:02d}",
                 'depart': f"{fin_h:02d}:{fin_m:02d}",
-                'duration': self.durations[idx]
+                'duration': self.durations[idx],
+                'is_mobilisasi': False
             })
             current_time = finish_time
 
-        jumlah_wisata = len(itinerary)
+        jumlah_wisata = len([item for item in itinerary if not item.get('is_mobilisasi')])
         fitness = (jumlah_wisata * 1000) / (total_distance + 1)
         return fitness, itinerary, total_distance, current_day
 

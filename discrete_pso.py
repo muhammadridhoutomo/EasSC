@@ -11,8 +11,9 @@ class Particle:
         self.velocity = []
 
 class PSOAlgorithm(GeneticAlgorithm):
-    def __init__(self, name, df_lokasi, distance_matrix, start_city='Surabaya', max_days=3, pop_size=100, generations=1000, w=0.7, c1=1.5, c2=1.5):
+    def __init__(self, name, df_lokasi, distance_matrix, duration_matrix, start_city='Surabaya', max_days=3, pop_size=100, generations=1000, w=0.7, c1=1.5, c2=1.5):
         super().__init__(name, df_lokasi, distance_matrix, pop_size, generations)
+        self.dur_matrix = duration_matrix
         self.start_city = start_city
         self.max_days = max_days
         self.w = w
@@ -65,11 +66,10 @@ class PSOAlgorithm(GeneticAlgorithm):
 
     def hitung_itinerary(self, rute):
         """
-        Logika penjadwalan kustom berdasarkan jumlah hari dan jam operasional.
+        Logika penjadwalan dengan menyertakan waktu MOBILISASI antar lokasi.
         """
         current_day = 1
         current_time = 8 * 60 # Mulai jam 08:00
-        
         itinerary = []
         total_distance = 0
         
@@ -78,37 +78,48 @@ class PSOAlgorithm(GeneticAlgorithm):
             kota = self.cities[idx]
             
             if i > 0:
-                travel_dist = self.matrix[rute[i-1]][idx] # Ini sudah matriks OSRM (km)
+                travel_dist = self.matrix[rute[i-1]][idx]
                 total_distance += travel_dist
-                # Gunakan asumsi kecepatan rata-rata 40km/jam -> 1.5 menit per km
-                travel_time = travel_dist * 1.5 
+                # Gunakan durasi nyata dari OSRM (menit)
+                travel_time = self.dur_matrix[rute[i-1]][idx]
+                
+                # Tambahkan entri MOBILISASI ke itinerary
+                start_h, start_m = int(current_time//60), int(current_time%60)
+                end_time = current_time + travel_time
+                end_h, end_m = int(end_time//60), int(end_time%60)
+                
+                itinerary.append({
+                    'day': current_day,
+                    'city': kota,
+                    'place': '🚗 Mobilisasi',
+                    'arrive': f"{start_h:02d}:{start_m:02d}",
+                    'depart': f"{end_h:02d}:{end_m:02d}",
+                    'duration': int(travel_time),
+                    'is_mobilisasi': True
+                })
+                current_time = end_time
             else:
                 travel_time = 0
                 
-            arrival_time = current_time + travel_time
-            
+            arrival_time = current_time
             buka_menit = self.open_mins[idx]
             tutup_menit = self.close_mins[idx]
             durasi = self.durations[idx]
             
-            # Jika sampai sebelum buka, tunggu sampai buka
             if arrival_time < buka_menit:
                 arrival_time = buka_menit
                 
             finish_time = arrival_time + durasi
             
-            # Cek apakah kunjungan ini melebihi jam tutup atau jam 9 malam
             if finish_time > tutup_menit or finish_time > 21 * 60:
-                # Pindah ke hari berikutnya
                 current_day += 1
                 current_time = 8 * 60 # Reset ke jam 8 pagi
-                
-                # Jika sudah melebihi batas hari user, berhenti menambah tempat
                 if current_day > self.max_days:
+                    # Jika sudah lewat hari, hapus entri mobilisasi terakhir jika ada
+                    if itinerary and itinerary[-1].get('is_mobilisasi'):
+                        itinerary.pop()
                     break
                     
-                # Hitung ulang waktu sampai karena mulai dari hotel/start baru
-                # (Sederhananya asumsikan 30 menit ke tempat pertama hari baru)
                 arrival_time = current_time + 30 
                 if arrival_time < buka_menit:
                     arrival_time = buka_menit
@@ -123,16 +134,13 @@ class PSOAlgorithm(GeneticAlgorithm):
                 'place': self.names[idx],
                 'arrive': f"{arr_h:02d}:{arr_m:02d}",
                 'depart': f"{fin_h:02d}:{fin_m:02d}",
-                'duration': durasi
+                'duration': durasi,
+                'is_mobilisasi': False
             })
-            
             current_time = finish_time
 
-        # Fitness: Mengutamakan jumlah tempat yang bisa dikunjungi dalam waktu terbatas
-        # dikurangi pinalti jarak agar rutenya efisien
-        jumlah_wisata = len(itinerary)
+        jumlah_wisata = len([item for item in itinerary if not item.get('is_mobilisasi')])
         fitness = (jumlah_wisata * 1000) / (total_distance + 1)
-        
         return fitness, itinerary, total_distance, current_day
 
     def get_swap_sequence(self, source, target):
