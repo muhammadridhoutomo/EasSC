@@ -8,7 +8,7 @@ import ast
 import json
 import requests
 import matplotlib.pyplot as plt
-from pso import PSOAlgorithm
+from discrete_pso import PSOAlgorithm
 from tabu_search import TabuSearch
 
 # Set Page Config

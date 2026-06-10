@@ -13,7 +13,7 @@ from ga_v1 import GeneticAlgorithm
 from ga_v2 import TournamentGA
 from ga_v3 import AdvancedMutationGA
 from ga_v4 import AdaptiveGA
-from pso import PSOAlgorithm
+from discrete_pso import PSOAlgorithm
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SEED = 42
