@@ -108,6 +108,7 @@ class TabuSearch(GeneticAlgorithm):
                 'day': current_day,
                 'city': kota,
                 'place': self.names[idx],
+                'place_idx': idx, # Penting untuk hitung rating
                 'arrive': f"{arr_h:02d}:{arr_m:02d}",
                 'depart': f"{fin_h:02d}:{fin_m:02d}",
                 'duration': self.durations[idx],
@@ -115,8 +116,19 @@ class TabuSearch(GeneticAlgorithm):
             })
             current_time = finish_time
 
+        # --- HITUNG FITNESS BERDASARKAN RATING & DIVERSITAS KOTA ---
+        # 1. Total Rating
+        total_rating = sum([float(self.df.iloc[item['place_idx']]['Rating']) for item in itinerary if not item.get('is_mobilisasi')])
+        
+        # 2. Diversitas Kota
+        cities_visited = set([item['city'] for item in itinerary if not item.get('is_mobilisasi')])
+        unique_cities_count = len(cities_visited)
+        city_reward = (unique_cities_count ** 2) * 1000 
+        
+        # 3. Kuantitas Wisata
         jumlah_wisata = len([item for item in itinerary if not item.get('is_mobilisasi')])
-        fitness = (jumlah_wisata * 1000) / (total_distance + 1)
+        
+        fitness = (total_rating * 150 + city_reward + jumlah_wisata * 100) / (total_distance + 1)
         return fitness, itinerary, total_distance, current_day
 
     def get_neighbors(self, solution):
