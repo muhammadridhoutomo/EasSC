@@ -227,6 +227,54 @@ if st.session_state.results:
         peta.get_root().html.add_child(folium.Element(script_js))
         components.html(peta._repr_html_(), height=600)
 
+        # --- 4. REKOMENDASI ALGORITMA TERBAIK ---
+        st.divider()
+        st.subheader("🏆 Rekomendasi Algoritma Terbaik")
+        
+        # Ambil metrik perbandingan
+        pso_res = results_map["PSO"]
+        tabu_res = results_map["Tabu Search"]
+        
+        pso_count = len([x for x in pso_res["itinerary"] if not x.get('is_mobilisasi')])
+        tabu_count = len([x for x in tabu_res["itinerary"] if not x.get('is_mobilisasi')])
+        
+        pso_dist = pso_res["distance"]
+        tabu_dist = tabu_res["distance"]
+        
+        # Hitung Rating
+        pso_ratings = [float(df_new[df_new['Nama Tempat'] == x['place']]['Rating'].values[0]) for x in pso_res["itinerary"] if not x.get('is_mobilisasi')]
+        tabu_ratings = [float(df_new[df_new['Nama Tempat'] == x['place']]['Rating'].values[0]) for x in tabu_res["itinerary"] if not x.get('is_mobilisasi')]
+        
+        pso_avg_rate = sum(pso_ratings)/len(pso_ratings) if pso_ratings else 0
+        tabu_avg_rate = sum(tabu_ratings)/len(tabu_ratings) if tabu_ratings else 0
+
+        col_rec1, col_rec2 = st.columns(2)
+        
+        with col_rec1:
+            st.markdown("**Metrik Perbandingan:**")
+            st.write(f"✅ **Jumlah Wisata**: PSO (**{pso_count}**) vs Tabu (**{tabu_count}**)")
+            st.write(f"📏 **Total Jarak**: PSO (**{pso_dist:.1f} km**) vs Tabu (**{tabu_dist:.1f} km**)")
+            st.write(f"⭐ **Rerata Rating**: PSO (**{pso_avg_rate:.2f}**) vs Tabu (**{tabu_avg_rate:.2f}**)")
+
+        with col_rec2:
+            # Logika Penentuan Pemenang
+            if pso_count > tabu_count:
+                winner = "Particle Swarm Optimization (PSO)"
+                reason = "berhasil mengunjungi lebih banyak lokasi wisata dalam durasi yang sama."
+            elif tabu_count > pso_count:
+                winner = "Tabu Search"
+                reason = "berhasil mengoptimalkan jadwal untuk mengunjungi lokasi lebih banyak."
+            else:
+                if pso_dist < tabu_dist:
+                    winner = "Particle Swarm Optimization (PSO)"
+                    reason = "lebih efisien karena menempuh jarak yang lebih pendek untuk jumlah wisata yang sama."
+                else:
+                    winner = "Tabu Search"
+                    reason = "lebih efisien dalam hal rute perjalanan (jarak tempuh minimal)."
+
+            st.success(f"🌟 **Rekomendasi:** Gunakan rute dari **{winner}**.")
+            st.info(f"**Alasan:** Algoritma ini {reason}")
+
 else:
     st.info("💡 Atur rencana perjalanan di sidebar, lalu klik 'Generate Perbandingan Rute'.")
     st.image("https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&q=80&w=1200")
