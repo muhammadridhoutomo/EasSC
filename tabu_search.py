@@ -33,14 +33,19 @@ class TabuSearch(GeneticAlgorithm):
             self.close_mins.append(t_h * 60 + t_m)
 
     def init_solution(self):
-        """Inisialisasi rute dengan memastikan kota start di urutan pertama."""
+        """Inisialisasi rute dengan memastikan kota start di urutan pertama, 
+        diikuti oleh campuran acak semua lokasi untuk mendorong multi-city trip."""
         indices = list(range(self.jumlah_tempat))
         start_indices = self.df[self.df[self.city_col] == self.start_city].index.tolist()
         if not start_indices: start_indices = [0]
         
-        remaining = [idx for idx in indices if idx not in start_indices]
+        # Acak urutan di dalam kota start
         random.shuffle(start_indices)
+        
+        # Ambil sisa tempat (termasuk dari kota lain)
+        remaining = [idx for idx in indices if idx not in start_indices]
         random.shuffle(remaining)
+        
         return start_indices + remaining
 
     def hitung_itinerary(self, rute):

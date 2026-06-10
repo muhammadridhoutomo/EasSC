@@ -42,24 +42,27 @@ class PSOAlgorithm(GeneticAlgorithm):
 
     def init_populasi(self):
         """
-        Inisialisasi populasi dengan memastikan rute dimulai dari kota yang dipilih user.
+        Inisialisasi populasi dengan memastikan rute dimulai dari kota yang dipilih user,
+        namun tetap mencampur lokasi dari kota-kota lain agar terjadi multi-city trip.
         """
         populasi = []
         indices = list(range(self.jumlah_tempat))
         
-        # Cari semua tempat di kota awal
+        # Cari tempat di kota keberangkatan
         start_indices = self.df[self.df[self.city_col] == self.start_city].index.tolist()
         
         if not start_indices:
-            print(f"⚠️ Warning: Kota {self.start_city} tidak ditemukan. Menggunakan Surabaya sebagai default.")
-            start_indices = self.df[self.df[self.city_col] == 'Surabaya'].index.tolist()
+            start_indices = [0]
 
         for _ in range(self.pop_size):
-            remaining = [idx for idx in indices if idx not in start_indices]
+            # Acak tempat di kota awal untuk diletakkan di depan (sebagai titik start)
             random.shuffle(start_indices)
+            
+            # Acak sisa tempat lainnya (dari semua kota pilihan)
+            remaining = [idx for idx in indices if idx not in start_indices]
             random.shuffle(remaining)
             
-            # Gabungkan: Tempat di kota awal diletakkan di depan
+            # Gabungkan: Start di kota awal, sisanya acak (mendorong eksplorasi antar kota)
             individu = start_indices + remaining
             populasi.append(individu)
         return populasi
