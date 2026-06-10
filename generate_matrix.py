@@ -1,50 +1,66 @@
 import pandas as pd
 import numpy as np
-import requests
-import ast
 import os
+import math
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-print("Memulai proses pembuatan matriks jarak...")
+def haversine(lat1, lon1, lat2, lon2):
+    """
+    Menghitung jarak antara dua titik koordinat dalam Kilometer 
+    menggunakan rumus Haversine.
+    """
+    # Radius bumi dalam kilometer
+    R = 6371.0
+    
+    # Ubah koordinat ke radian
+    d_lat = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+    
+    a = math.sin(d_lat / 2)**2 + math.cos(math.radians(lat1)) * \
+        math.cos(math.radians(lat2)) * math.sin(d_lon / 2)**2
+    
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    distance = R * c
+    return distance
 
-# 1. Baca dataset 32 titik
-try:
-    df = pd.read_csv(os.path.join(BASE_DIR, 'wisata_sejarah.csv'))
-except FileNotFoundError:
-    print("❌ ERROR: File 'wisata_sejarah.csv' tidak ditemukan!")
-    exit()
+def process_dataset_haversine(csv_name, npy_name):
+    print(f"--- Memproses {csv_name} menggunakan Rumus Haversine ---")
+    
+    try:
+        df = pd.read_csv(os.path.join(BASE_DIR, csv_name))
+    except FileNotFoundError:
+        print(f"❌ ERROR: File '{csv_name}' tidak ditemukan!")
+        return
 
-# 2. Ekstrak koordinat (OSRM membutuhkan format: longitude,latitude)
-coords = []
-for coord_str in df['Coordinate']:
-    coord_dict = ast.literal_eval(coord_str)
-    coords.append(f"{coord_dict['lng']},{coord_dict['lat']}")
+    num_locations = len(df)
+    dist_matrix = np.zeros((num_locations, num_locations))
 
-coords_string = ";".join(coords)
+    # Ambil koordinat
+    coords = []
+    for _, row in df.iterrows():
+        if 'Latitude' in df.columns:
+            coords.append((row['Latitude'], row['Longitude']))
+        else:
+            # Format lama (parsing Coordinate string)
+            import ast
+            c_dict = ast.literal_eval(row['Coordinate'])
+            coords.append((c_dict['lat'], c_dict['lng']))
 
-print(f"Mengambil jarak asli jalan raya untuk {len(coords)} lokasi...")
+    # Hitung matriks jarak titik-ke-titik
+    for i in range(num_locations):
+        for j in range(num_locations):
+            if i == j:
+                dist_matrix[i, j] = 0
+            else:
+                lat1, lon1 = coords[i]
+                lat2, lon2 = coords[j]
+                dist_matrix[i, j] = haversine(lat1, lon1, lat2, lon2)
 
-# 3. Tembak endpoint OSRM Table API
-url = f"http://router.project-osrm.org/table/v1/driving/{coords_string}?annotations=distance"
+    # Simpan matriks
+    np.save(os.path.join(BASE_DIR, npy_name), dist_matrix)
+    print(f"✅ Matriks sukses dihitung (Haversine) dan disimpan sebagai '{npy_name}'!")
 
-try:
-    response = requests.get(url)
-    data = response.json()
-
-    if data['code'] == 'Ok':
-        # Jarak dari OSRM dalam satuan meter, kita konversi ke kilometer
-        distance_matrix = np.array(data['distances']) / 1000.0
-        
-        # Opsi: Jika ada titik yang terisolasi (None/Null), ubah jadi jarak tak terhingga
-        distance_matrix = np.nan_to_num(distance_matrix, nan=float('inf'))
-        
-        # 4. Simpan matriks ke file .npy
-        nama_file_npy = 'matriks_wisata.npy'
-        np.save(os.path.join(BASE_DIR, nama_file_npy), distance_matrix)
-        print(f"✅ Matriks sukses dibuat dan disimpan sebagai '{nama_file_npy}'!")
-    else:
-        print(f"❌ OSRM merespon dengan error: {data.get('message', 'Unknown Error')}")
-
-except Exception as e:
-    print(f"❌ Terjadi kesalahan saat menghubungi API: {e}")
+if __name__ == "__main__":
+    process_dataset_haversine('wisata_sejarah.csv', 'matriks_wisata.npy')
+    process_dataset_haversine('historical_new.csv', 'matriks_wisata_new.npy')

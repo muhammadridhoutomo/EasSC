@@ -19,24 +19,34 @@ class GeneticAlgorithm:
         self.best_days = 0
 
         # === OPTIMASI KECEPATAN: Ekstrak Pandas ke Python List murni di awal ===
-        self.cities = self.df['City'].tolist()
-        self.names = self.df['Place_Name'].tolist()
-        self.durations = self.df['Visit_Duration'].astype(int).tolist()
+        # Deteksi Kolom (Handle Old vs New CSV)
+        if 'City' in self.df.columns:
+            self.cities = self.df['City'].tolist()
+            self.names = self.df['Place_Name'].tolist()
+            self.durations = self.df['Visit_Duration'].astype(int).tolist()
+            open_col, close_col = 'Opening_Hours', 'Closing_Hours'
+        else:
+            self.cities = self.df['Kota'].tolist()
+            self.names = self.df['Nama Tempat'].tolist()
+            self.durations = self.df['Durasi Kunjungan (menit)'].astype(int).tolist()
+            open_col, close_col = 'Jam Buka', 'Jam Tutup'
         
         self.open_mins = []
         self.close_mins = []
         for _, row in self.df.iterrows():
-            b_h, b_m = map(int, str(row['Opening_Hours']).split(':'))
-            t_h, t_m = map(int, str(row['Closing_Hours']).split(':'))
+            b_h, b_m = map(int, str(row[open_col]).split(':'))
+            t_h, t_m = map(int, str(row[close_col]).split(':'))
             self.open_mins.append(b_h * 60 + b_m)
             self.close_mins.append(t_h * 60 + t_m)
 
     def init_populasi(self):
         populasi = []
-        sby = self.df[self.df['City'] == 'Surabaya'].index.tolist()
-        sda = self.df[self.df['City'] == 'Sidoarjo'].index.tolist()
-        mjk = self.df[self.df['City'] == 'Mojokerto'].index.tolist()
-        mlg = self.df[self.df['City'] == 'Malang'].index.tolist()
+        city_col = 'City' if 'City' in self.df.columns else 'Kota'
+        
+        sby = self.df[self.df[city_col] == 'Surabaya'].index.tolist()
+        sda = self.df[self.df[city_col] == 'Sidoarjo'].index.tolist()
+        mjk = self.df[self.df[city_col] == 'Mojokerto'].index.tolist()
+        mlg = self.df[self.df[city_col] == 'Malang'].index.tolist()
         
         for _ in range(self.pop_size):
             random.shuffle(sby)
