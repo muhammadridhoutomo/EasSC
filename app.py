@@ -10,6 +10,7 @@ import requests
 import matplotlib.pyplot as plt
 from discrete_pso import PSOAlgorithm
 from tabu_search import TabuSearch
+from hybrid_GA import HybridGA
 
 # Set Page Config
 st.set_page_config(page_title="Travel Itinerary Planner PRO", layout="wide")
@@ -28,7 +29,7 @@ df_new, matrix_new, dur_matrix_new = load_data()
 
 # --- 2. UI HEADER ---
 st.title("🗺️ Custom Travel Planner (Multi-Algorithm Comparison)")
-st.markdown("Bandingkan rute terbaik antara algoritma **Particle Swarm Optimization** dan **Tabu Search** secara bersamaan.")
+st.markdown("Bandingkan rute terbaik antara algoritma **Particle Swarm Optimization**, **Tabu Search**, dan **Hybrid Genetic Algorithm** secara bersamaan.")
 
 # --- 3. LOGIKA RESET ---
 def reset_results():
@@ -88,10 +89,16 @@ if run_button and start_city:
         tabu = TabuSearch("Tabu Search", df_filtered, matrix_filtered, dur_matrix_filtered,
                          start_city=start_city, max_days=max_days, iterations=500)
         _, tabu_dist, tabu_itin, tabu_days = tabu.run()
+        
+        # Jalankan Hybrid GA
+        hybrid_ga = HybridGA("Hybrid GA", df_filtered, matrix_filtered, dur_matrix_filtered,
+                            start_city=start_city, max_days=max_days, pop_size=200, generations=500)
+        _, hybrid_dist, hybrid_itin, hybrid_days = hybrid_ga.run()
 
         st.session_state.results = {
             "PSO": {"itinerary": pso_itin, "distance": pso_dist, "history": pso.history, "color": "#EF476F"},
             "Tabu Search": {"itinerary": tabu_itin, "distance": tabu_dist, "history": tabu.history, "color": "#118AB2"},
+            "Hybrid GA": {"itinerary": hybrid_itin, "distance": hybrid_dist, "history": hybrid_ga.history, "color": "#06A77D"},
             "meta": {"city": start_city, "days": max_days, "cities_list": selected_cities},
             "df_used": df_filtered
         }
@@ -107,7 +114,7 @@ if st.session_state.results:
     # 1. GRAFIK KONVERGENSI
     st.subheader("📈 Progress Optimasi")
     fig, ax = plt.subplots(figsize=(12, 3))
-    for name in ["PSO", "Tabu Search"]:
+    for name in ["PSO", "Tabu Search", "Hybrid GA"]:
         ax.plot(results_map[name]["history"], label=name, color=results_map[name]["color"], linewidth=2)
     ax.set_ylabel('Jumlah Wisata')
     ax.legend()
@@ -117,8 +124,8 @@ if st.session_state.results:
     st.divider()
     selected_algos = st.multiselect(
         "🔍 **Pilih Algoritma yang ingin ditampilkan di Peta:**", 
-        ["PSO", "Tabu Search"], 
-        default=["PSO", "Tabu Search"]
+        ["PSO", "Tabu Search", "Hybrid GA"], 
+        default=["PSO", "Tabu Search", "Hybrid GA"]
     )
 
     if not selected_algos:
@@ -200,15 +207,20 @@ if st.session_state.results:
                 if(!items) return;
                 var html = '<h4 style="text-align:center; color:#073B4C; margin-bottom:5px;">' + name + '</h4><hr>';
                 var curDay = 0;
+                var wisataCounter = 0;
                 items.forEach(function(item) {{
                     if (item.day !== curDay) {{
                         curDay = item.day;
                         html += '<div style="background:#073B4C; color:white; padding:3px 8px; border-radius:4px; margin-top:10px; font-weight:bold;">Hari ' + curDay + '</div>';
                     }}
                     var isMob = item.place.includes('Mobilisasi');
+                    if (!isMob) {{
+                        wisataCounter++;
+                    }}
                     var color = isMob ? '#888' : '#EF476F';
+                    var displayPlace = isMob ? item.place : (wisataCounter + '. ' + item.place);
                     html += '<div style="margin: 8px 0; border-left: 3px solid ' + color + '; padding-left: 8px;">';
-                    html += '<b>' + item.arrive + ' - ' + item.depart + '</b><br>' + item.place + '</div>';
+                    html += '<b>' + item.arrive + ' - ' + item.depart + '</b><br>' + displayPlace + '</div>';
                 }});
                 contentDiv.innerHTML = html;
                 contentDiv.style.textAlign = 'left';
@@ -234,43 +246,53 @@ if st.session_state.results:
         # Ambil metrik perbandingan
         pso_res = results_map["PSO"]
         tabu_res = results_map["Tabu Search"]
+        hybrid_res = results_map["Hybrid GA"]
         
         pso_count = len([x for x in pso_res["itinerary"] if not x.get('is_mobilisasi')])
         tabu_count = len([x for x in tabu_res["itinerary"] if not x.get('is_mobilisasi')])
+        hybrid_count = len([x for x in hybrid_res["itinerary"] if not x.get('is_mobilisasi')])
         
         pso_dist = pso_res["distance"]
         tabu_dist = tabu_res["distance"]
+        hybrid_dist = hybrid_res["distance"]
         
         # Hitung Rating
         pso_ratings = [float(df_new[df_new['Nama Tempat'] == x['place']]['Rating'].values[0]) for x in pso_res["itinerary"] if not x.get('is_mobilisasi')]
         tabu_ratings = [float(df_new[df_new['Nama Tempat'] == x['place']]['Rating'].values[0]) for x in tabu_res["itinerary"] if not x.get('is_mobilisasi')]
+        hybrid_ratings = [float(df_new[df_new['Nama Tempat'] == x['place']]['Rating'].values[0]) for x in hybrid_res["itinerary"] if not x.get('is_mobilisasi')]
         
         pso_avg_rate = sum(pso_ratings)/len(pso_ratings) if pso_ratings else 0
         tabu_avg_rate = sum(tabu_ratings)/len(tabu_ratings) if tabu_ratings else 0
+        hybrid_avg_rate = sum(hybrid_ratings)/len(hybrid_ratings) if hybrid_ratings else 0
 
         col_rec1, col_rec2 = st.columns(2)
         
         with col_rec1:
             st.markdown("**Metrik Perbandingan:**")
-            st.write(f"✅ **Jumlah Wisata**: PSO (**{pso_count}**) vs Tabu (**{tabu_count}**)")
-            st.write(f"📏 **Total Jarak**: PSO (**{pso_dist:.1f} km**) vs Tabu (**{tabu_dist:.1f} km**)")
-            st.write(f"⭐ **Rerata Rating**: PSO (**{pso_avg_rate:.2f}**) vs Tabu (**{tabu_avg_rate:.2f}**)")
+            st.write(f"✅ **Jumlah Wisata**: PSO (**{pso_count}**) vs Tabu (**{tabu_count}**) vs Hybrid GA (**{hybrid_count}**)")
+            st.write(f"📏 **Total Jarak**: PSO (**{pso_dist:.1f} km**) vs Tabu (**{tabu_dist:.1f} km**) vs Hybrid GA (**{hybrid_dist:.1f} km**)")
+            st.write(f"⭐ **Rerata Rating**: PSO (**{pso_avg_rate:.2f}**) vs Tabu (**{tabu_avg_rate:.2f}**) vs Hybrid GA (**{hybrid_avg_rate:.2f}**)")
 
         with col_rec2:
-            # Logika Penentuan Pemenang
-            if pso_count > tabu_count:
+            # Logika Penentuan Pemenang dengan 3 algoritma
+            algos = {
+                "PSO": (pso_count, pso_dist, pso_avg_rate),
+                "Tabu Search": (tabu_count, tabu_dist, tabu_avg_rate),
+                "Hybrid GA": (hybrid_count, hybrid_dist, hybrid_avg_rate)
+            }
+            
+            # Tentukan pemenang: prioritas jumlah wisata > efisiensi jarak > rating
+            winner_name = max(algos, key=lambda x: (algos[x][0], -algos[x][1], algos[x][2]))
+            
+            if winner_name == "PSO":
                 winner = "Particle Swarm Optimization (PSO)"
-                reason = "berhasil mengunjungi lebih banyak lokasi wisata dalam durasi yang sama."
-            elif tabu_count > pso_count:
+            elif winner_name == "Tabu Search":
                 winner = "Tabu Search"
-                reason = "berhasil mengoptimalkan jadwal untuk mengunjungi lokasi lebih banyak."
             else:
-                if pso_dist < tabu_dist:
-                    winner = "Particle Swarm Optimization (PSO)"
-                    reason = "lebih efisien karena menempuh jarak yang lebih pendek untuk jumlah wisata yang sama."
-                else:
-                    winner = "Tabu Search"
-                    reason = "lebih efisien dalam hal rute perjalanan (jarak tempuh minimal)."
+                winner = "Hybrid Genetic Algorithm (GA)"
+            
+            winner_data = algos[winner_name]
+            reason = f"mengunjungi {winner_data[0]} lokasi wisata dengan jarak {winner_data[1]:.1f} km dan rating {winner_data[2]:.2f}."
 
             st.success(f"🌟 **Rekomendasi:** Gunakan rute dari **{winner}**.")
             st.info(f"**Alasan:** Algoritma ini {reason}")

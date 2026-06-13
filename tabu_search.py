@@ -194,11 +194,12 @@ class TabuSearch(GeneticAlgorithm):
             # Clean tabu list
             tabu_list = {m: exp for m, exp in tabu_list.items() if exp > i}
             
-            # Catat history (jumlah wisata)
-            self.history.append(len(best_itin))
+            # Catat history (hanya jumlah wisata, exclude mobilisasi)
+            wisata_count = len([x for x in best_itin if not x.get('is_mobilisasi')])
+            self.history.append(wisata_count)
             
             if (i + 1) % 100 == 0:
-                print(f"      Iter {i + 1:<4} | Wisata: {len(best_itin)} | Jarak: {best_dist:.2f} km")
+                print(f"      Iter {i + 1:<4} | Wisata: {wisata_count} | Jarak: {best_dist:.2f} km")
 
         self.best_route = best_solution
         self.best_distance = best_dist

@@ -223,9 +223,10 @@ class PSOAlgorithm(GeneticAlgorithm):
                     p.position[idx1], p.position[idx2] = p.position[idx2], p.position[idx1]
 
             # Di PSO custom ini, history mencatat jumlah wisata yang bisa dikunjungi
-            self.history.append(len(self.best_itinerary))
+            wisata_count = len([x for x in self.best_itinerary if not x.get('is_mobilisasi')])
+            self.history.append(wisata_count)
             
             if (gen + 1) % 100 == 0:
-                print(f"      Gen {gen + 1:<4} | Wisata: {len(self.best_itinerary)} | Jarak: {self.best_distance:.2f} km")
+                print(f"      Gen {gen + 1:<4} | Wisata: {wisata_count} | Jarak: {self.best_distance:.2f} km")
 
         return self.best_route, self.best_distance, self.best_itinerary, self.best_days
