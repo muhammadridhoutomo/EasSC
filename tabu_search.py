@@ -33,20 +33,23 @@ class TabuSearch(GeneticAlgorithm):
             self.close_mins.append(t_h * 60 + t_m)
 
     def init_solution(self):
-        """Inisialisasi rute dengan memastikan kota start di urutan pertama, 
-        diikuti oleh campuran acak semua lokasi untuk mendorong multi-city trip."""
+        """Inisialisasi rute: Selesaikan satu kota baru pindah ke kota lain.
+        Dimulai dari start_city."""
         indices = list(range(self.jumlah_tempat))
-        start_indices = self.df[self.df[self.city_col] == self.start_city].index.tolist()
-        if not start_indices: start_indices = [0]
+        all_cities_in_df = list(self.df[self.city_col].unique())
         
-        # Acak urutan di dalam kota start
-        random.shuffle(start_indices)
+        if self.start_city in all_cities_in_df:
+            all_cities_in_df.remove(self.start_city)
+        ordered_cities = [self.start_city] + all_cities_in_df
         
-        # Ambil sisa tempat (termasuk dari kota lain)
-        remaining = [idx for idx in indices if idx not in start_indices]
-        random.shuffle(remaining)
+        city_groups = {c: self.df[self.df[self.city_col] == c].index.tolist() for c in ordered_cities}
         
-        return start_indices + remaining
+        individu = []
+        for c in ordered_cities:
+            group = city_groups[c][:]
+            random.shuffle(group)
+            individu.extend(group)
+        return individu
 
     def hitung_itinerary(self, rute):
         """
@@ -121,14 +124,22 @@ class TabuSearch(GeneticAlgorithm):
         total_rating = sum([float(self.df.iloc[item['place_idx']]['Rating']) for item in itinerary if not item.get('is_mobilisasi')])
         
         # 2. Diversitas Kota
-        cities_visited = set([item['city'] for item in itinerary if not item.get('is_mobilisasi')])
-        unique_cities_count = len(cities_visited)
+        visited_cities_list = [item['city'] for item in itinerary if not item.get('is_mobilisasi')]
+        unique_cities_visited = set(visited_cities_list)
+        unique_cities_count = len(unique_cities_visited)
         city_reward = (unique_cities_count ** 2) * 1000 
         
         # 3. Kuantitas Wisata
         jumlah_wisata = len([item for item in itinerary if not item.get('is_mobilisasi')])
         
-        fitness = (total_rating * 150 + city_reward + jumlah_wisata * 100) / (total_distance + 1)
+        # 4. PENALTY: City Jumping
+        city_sequence = []
+        for c in visited_cities_list:
+            if not city_sequence or c != city_sequence[-1]:
+                city_sequence.append(c)
+        city_jump_penalty = (len(city_sequence) - unique_cities_count) * 10000
+
+        fitness = (total_rating * 150 + city_reward + jumlah_wisata * 100) / (total_distance + city_jump_penalty + 1)
         return fitness, itinerary, total_distance, current_day
 
     def get_neighbors(self, solution):
@@ -137,7 +148,7 @@ class TabuSearch(GeneticAlgorithm):
         # Batasi jumlah tetangga agar tidak terlalu lambat (misal 50 tetangga)
         for _ in range(50):
             idx1, idx2 = random.sample(range(len(solution)), 2)
-            # Jangan ganggu posisi pertama jika itu kota start
+            # Jangan ganggu posisi pertama (titik start)
             if idx1 == 0 or idx2 == 0: continue
             
             neighbor = list(solution)

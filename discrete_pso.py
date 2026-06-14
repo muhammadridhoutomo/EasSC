@@ -42,28 +42,28 @@ class PSOAlgorithm(GeneticAlgorithm):
 
     def init_populasi(self):
         """
-        Inisialisasi populasi dengan memastikan rute dimulai dari kota yang dipilih user,
-        namun tetap mencampur lokasi dari kota-kota lain agar terjadi multi-city trip.
+        Inisialisasi populasi: Selesaikan satu kota baru pindah ke kota lain.
+        Dimulai dari start_city.
         """
         populasi = []
         indices = list(range(self.jumlah_tempat))
         
-        # Cari tempat di kota keberangkatan
-        start_indices = self.df[self.df[self.city_col] == self.start_city].index.tolist()
+        # Kelompokkan indeks berdasarkan kota
+        all_cities_in_df = list(self.df[self.city_col].unique())
         
-        if not start_indices:
-            start_indices = [0]
+        # Pastikan start_city di depan
+        if self.start_city in all_cities_in_df:
+            all_cities_in_df.remove(self.start_city)
+        ordered_cities = [self.start_city] + all_cities_in_df
+        
+        city_groups = {c: self.df[self.df[self.city_col] == c].index.tolist() for c in ordered_cities}
 
         for _ in range(self.pop_size):
-            # Acak tempat di kota awal untuk diletakkan di depan (sebagai titik start)
-            random.shuffle(start_indices)
-            
-            # Acak sisa tempat lainnya (dari semua kota pilihan)
-            remaining = [idx for idx in indices if idx not in start_indices]
-            random.shuffle(remaining)
-            
-            # Gabungkan: Start di kota awal, sisanya acak (mendorong eksplorasi antar kota)
-            individu = start_indices + remaining
+            individu = []
+            for c in ordered_cities:
+                group = city_groups[c][:]
+                random.shuffle(group)
+                individu.extend(group)
             populasi.append(individu)
         return populasi
 
@@ -147,16 +147,24 @@ class PSOAlgorithm(GeneticAlgorithm):
         # 1. Total Rating
         total_rating = sum([float(self.df.iloc[item['place_idx']]['Rating']) for item in itinerary if not item.get('is_mobilisasi')])
         
-        # 2. Diversitas Kota (Reward agar mengunjungi kedua kota)
-        cities_visited = set([item['city'] for item in itinerary if not item.get('is_mobilisasi')])
-        unique_cities_count = len(cities_visited)
-        city_reward = (unique_cities_count ** 2) * 1000 # Sangat menguntungkan jika > 1 kota
+        # 2. Diversitas Kota
+        visited_cities_list = [item['city'] for item in itinerary if not item.get('is_mobilisasi')]
+        unique_cities_visited = set(visited_cities_list)
+        unique_cities_count = len(unique_cities_visited)
+        city_reward = (unique_cities_count ** 2) * 1000 
         
         # 3. Kuantitas Wisata
         jumlah_wisata = len([item for item in itinerary if not item.get('is_mobilisasi')])
         
+        # 4. PENALTY: City Jumping
+        city_sequence = []
+        for c in visited_cities_list:
+            if not city_sequence or c != city_sequence[-1]:
+                city_sequence.append(c)
+        city_jump_penalty = (len(city_sequence) - unique_cities_count) * 10000
+
         # Fitness Formula
-        fitness = (total_rating * 150 + city_reward + jumlah_wisata * 100) / (total_distance + 1)
+        fitness = (total_rating * 150 + city_reward + jumlah_wisata * 100) / (total_distance + city_jump_penalty + 1)
         
         return fitness, itinerary, total_distance, current_day
 

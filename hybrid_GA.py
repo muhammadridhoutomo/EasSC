@@ -55,19 +55,24 @@ class HybridGA:
             self.close_mins.append(t_h * 60 + t_m)
 
     def init_populasi(self):
-        """Inisialisasi populasi dengan rute dimulai dari start_city"""
+        """Inisialisasi populasi: Selesaikan satu kota baru pindah ke kota lain.
+        Dimulai dari start_city."""
         populasi = []
         indices = list(range(self.jumlah_tempat))
-        start_indices = self.df[self.df[self.city_col] == self.start_city].index.tolist()
+        all_cities_in_df = list(self.df[self.city_col].unique())
         
-        if not start_indices:
-            start_indices = [0]
+        if self.start_city in all_cities_in_df:
+            all_cities_in_df.remove(self.start_city)
+        ordered_cities = [self.start_city] + all_cities_in_df
+        
+        city_groups = {c: self.df[self.df[self.city_col] == c].index.tolist() for c in ordered_cities}
 
         for _ in range(self.pop_size):
-            random.shuffle(start_indices)
-            remaining = [idx for idx in indices if idx not in start_indices]
-            random.shuffle(remaining)
-            individu = start_indices + remaining
+            individu = []
+            for c in ordered_cities:
+                group = city_groups[c][:]
+                random.shuffle(group)
+                individu.extend(group)
             populasi.append(individu)
         return populasi
 
@@ -137,15 +142,24 @@ class HybridGA:
             current_time = finish_time
         
         # Hitung fitness (sama seperti PSO/Tabu)
-        total_rating = sum([float(self.df.iloc[self.names.index(item['place'])]['Rating']) 
+        visited_cities_list = [item['city'] for item in itinerary if not item.get('is_mobilisasi')]
+        total_rating = sum([float(self.df[self.df[self.name_col] == item['place']]['Rating'].values[0]) 
                            for item in itinerary 
                            if not item.get('is_mobilisasi')])
-        cities_visited = set([item['city'] for item in itinerary if not item.get('is_mobilisasi')])
-        unique_cities_count = len(cities_visited)
+        
+        unique_cities_visited = set(visited_cities_list)
+        unique_cities_count = len(unique_cities_visited)
         city_reward = (unique_cities_count ** 2) * 1000
         jumlah_wisata = len([item for item in itinerary if not item.get('is_mobilisasi')])
         
-        fitness = (total_rating * 150 + city_reward + jumlah_wisata * 100) / (total_distance + 1)
+        # PENALTY: City Jumping
+        city_sequence = []
+        for c in visited_cities_list:
+            if not city_sequence or c != city_sequence[-1]:
+                city_sequence.append(c)
+        city_jump_penalty = (len(city_sequence) - unique_cities_count) * 10000
+
+        fitness = (total_rating * 150 + city_reward + jumlah_wisata * 100) / (total_distance + city_jump_penalty + 1)
         
         return fitness, itinerary, total_distance, current_day
 
@@ -211,7 +225,7 @@ class HybridGA:
             return child
 
     def adaptive_mutation(self, child, gen):
-        """Adaptive mutation dengan decreasing rate"""
+        """Adaptive mutation dengan decreasing rate. Proteksi titik start (indeks 0)."""
         current_mut_rate = self.mut_rate * (1 - (gen / self.generations) ** 1.5)
         current_mut_rate = max(0.01, current_mut_rate)
         
@@ -219,17 +233,20 @@ class HybridGA:
             mutation_type = random.choice(['swap', 'insert', 'inversion'])
             
             if mutation_type == 'swap':
-                idx1, idx2 = random.sample(range(len(child)), 2)
+                # Swap tidak boleh melibatkan indeks 0
+                idx1, idx2 = random.sample(range(1, len(child)), 2)
                 child[idx1], child[idx2] = child[idx2], child[idx1]
             
             elif mutation_type == 'insert':
-                idx = random.randint(0, len(child) - 1)
+                # Insert tidak boleh melibatkan indeks 0
+                idx = random.randint(1, len(child) - 1)
                 place = child.pop(idx)
-                new_idx = random.randint(0, len(child))
+                new_idx = random.randint(1, len(child))
                 child.insert(new_idx, place)
             
             elif mutation_type == 'inversion':
-                idx1, idx2 = sorted(random.sample(range(len(child)), 2))
+                # Inversion tidak boleh melibatkan indeks 0
+                idx1, idx2 = sorted(random.sample(range(1, len(child)), 2))
                 child[idx1:idx2 + 1] = child[idx1:idx2 + 1][::-1]
         
         return child

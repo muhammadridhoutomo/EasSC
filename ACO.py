@@ -161,50 +161,65 @@ class ACOAlgorithm:
             })
             current_time = finish_time
 
-        #FITNESS FUNCTION
-        #Total Rating
+        # --- HITUNG FITNESS BERDASARKAN RATING & DIVERSITAS KOTA ---
+        # 1. Total Rating
         total_rating = sum([self.ratings[item['place_idx']]
                             for item in itinerary if not item.get('is_mobilisasi')])
 
-        #Diversitas Kota
-        cities_visited = set([item['city'] for item in itinerary
-                              if not item.get('is_mobilisasi')])
-        unique_cities_count = len(cities_visited)
+        # 2. Diversitas Kota
+        cities_visited_list = [item['city'] for item in itinerary if not item.get('is_mobilisasi')]
+        cities_visited_unique = set(cities_visited_list)
+        unique_cities_count = len(cities_visited_unique)
         city_reward = (unique_cities_count ** 2) * 1000
 
-        #Kuantitas Wisata
+        # 3. Kuantitas Wisata
         jumlah_wisata = len([item for item in itinerary if not item.get('is_mobilisasi')])
 
-        fitness = (total_rating * 150 + city_reward + jumlah_wisata * 100) / (total_distance + 1)
+        # 4. PENALTY: City Jumping (kembali ke kota yang sudah ditinggalkan)
+        city_sequence = []
+        for c in cities_visited_list:
+            if not city_sequence or c != city_sequence[-1]:
+                city_sequence.append(c)
+        
+        # Jika panjang sequence > jumlah kota unik, berarti ada lompatan balik
+        city_jump_penalty = (len(city_sequence) - unique_cities_count) * 10000
+
+        fitness = (total_rating * 150 + city_reward + jumlah_wisata * 100) / (total_distance + city_jump_penalty + 1)
 
         return fitness, itinerary, total_distance, current_day
 
     def construct_ant_route(self):
-        #Mulai dari tempat random di start_city
+        # Mulai dari tempat random di start_city
         current = random.choice(self.start_indices)
         route = [current]
         unvisited = set(range(self.jumlah_tempat))
         unvisited.remove(current)
 
         while unvisited:
+            current_city = self.cities[current]
             candidates = list(unvisited)
+            
+            # PRIORITAS: Selesaikan kota saat ini sebelum pindah
+            same_city_candidates = [j for j in candidates if self.cities[j] == current_city]
+            
+            # Jika masih ada tempat di kota yang sama, paksa pilih dari situ
+            search_pool = same_city_candidates if same_city_candidates else candidates
 
-            #Hitung skor untuk setiap candidate
+            # Hitung skor untuk search_pool
             tau_row = self.pheromone[current]
             eta_row = self.heuristic[current]
 
             scores = np.array([
                 (tau_row[j] ** self.alpha) * (eta_row[j] ** self.beta)
-                for j in candidates
+                for j in search_pool
             ])
 
             total = scores.sum()
             if total <= 0 or not np.isfinite(total):
-                #Fallback: pilih random
-                next_place = random.choice(candidates)
+                next_place = random.choice(search_pool)
             else:
                 probs = scores / total
-                next_place = int(np.random.choice(candidates, p=probs))
+                next_place = int(np.random.choice(search_pool, p=probs))
 
             route.append(next_place)
             unvisited.remove(next_place)
