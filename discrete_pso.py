@@ -11,7 +11,7 @@ class Particle:
         self.velocity = []
 
 class PSOAlgorithm(GeneticAlgorithm):
-    def __init__(self, name, df_lokasi, distance_matrix, duration_matrix, start_city='Surabaya', max_days=3, pop_size=100, generations=1000, w=0.7, c1=1.5, c2=1.5):
+    def __init__(self, name="Discrete PSO", df_lokasi=None, distance_matrix=None, duration_matrix=None, start_city='Surabaya', max_days=3, pop_size=100, generations=1000, w=0.7, c1=1.5, c2=1.5):
         super().__init__(name, df_lokasi, distance_matrix, pop_size, generations)
         self.dur_matrix = duration_matrix
         self.start_city = start_city

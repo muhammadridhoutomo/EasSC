@@ -24,7 +24,7 @@ GENERATIONS = 200 # Using 200 for faster execution while maintaining comparabili
 
 # Algorithm list
 algorithm_classes = [
-    ("PSO", PSOAlgorithm),
+    ("Discrete PSO", PSOAlgorithm),
     ("Tabu Search", TabuSearch),
     ("Hybrid GA", HybridGA),
     ("ACO", ACOAlgorithm)
