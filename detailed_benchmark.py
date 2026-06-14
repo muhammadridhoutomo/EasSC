@@ -26,11 +26,15 @@ def run_detailed_benchmark():
     print("3. Hybrid GA (Genetic Algorithm)")
     print("4. ACO (Ant Colony Optimization)")
 
-    choice = input("\nMasukkan pilihan (1-4): ")
-
-    start_city = input("Masukkan Kota Keberangkatan: ") or "Surabaya"
-    max_days = int(input("Berapa hari perjalanan? (1-7): ") or "3")
-    iters = int(input("Jumlah Iterasi/Generasi (100-500): ") or "200")
+    choice = input("\nMasukkan pilihan (1-4): ").strip()
+    
+    start_city = input("Masukkan Kota Keberangkatan: ").strip() or "Surabaya"
+    
+    raw_days = input("Berapa hari perjalanan? (1-7): ").strip()
+    max_days = int(''.join(filter(str.isdigit, raw_days))) if raw_days else 3
+    
+    raw_iters = input("Jumlah Iterasi/Generasi (100-500): ").strip()
+    iters = int(''.join(filter(str.isdigit, raw_iters))) if raw_iters else 200
 
     algo_map = {
         '1': ("Discrete PSO", PSOAlgorithm),
