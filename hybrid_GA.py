@@ -49,8 +49,10 @@ class HybridGA:
         self.open_mins = []
         self.close_mins = []
         for _, row in self.df.iterrows():
-            b_h, b_m = map(int, str(row[self.open_col]).split(':'))
-            t_h, t_m = map(int, str(row[self.close_col]).split(':'))
+            b_parts = str(row[self.open_col]).split(':')
+            t_parts = str(row[self.close_col]).split(':')
+            b_h, b_m = int(b_parts[0]), int(b_parts[1])
+            t_h, t_m = int(t_parts[0]), int(t_parts[1])
             self.open_mins.append(b_h * 60 + b_m)
             self.close_mins.append(t_h * 60 + t_m)
 
@@ -143,13 +145,22 @@ class HybridGA:
         
         # Hitung fitness (sama seperti PSO/Tabu)
         visited_cities_list = [item['city'] for item in itinerary if not item.get('is_mobilisasi')]
-        total_rating = sum([float(self.df[self.df[self.name_col] == item['place']]['Rating'].values[0]) 
+        # Total Rating (Diberi pangkat agar rating tinggi jauh lebih berharga)
+        total_rating = sum([(float(self.df[self.df[self.name_col] == item['place']]['Rating'].values[0]) ** 2)
                            for item in itinerary 
                            if not item.get('is_mobilisasi')])
         
         unique_cities_visited = set(visited_cities_list)
         unique_cities_count = len(unique_cities_visited)
-        city_reward = (unique_cities_count ** 2) * 1000
+        
+        # Ambil daftar kota yang seharusnya dikunjungi
+        selected_cities_count = len(set(self.cities))
+        
+        missing_city_penalty = 0
+        if unique_cities_count < selected_cities_count:
+            missing_city_penalty = (selected_cities_count - unique_cities_count) * 100000
+            
+        city_reward = (unique_cities_count ** 3) * 5000
         jumlah_wisata = len([item for item in itinerary if not item.get('is_mobilisasi')])
         
         # PENALTY: City Jumping
@@ -159,7 +170,7 @@ class HybridGA:
                 city_sequence.append(c)
         city_jump_penalty = (len(city_sequence) - unique_cities_count) * 10000
 
-        fitness = (total_rating * 150 + city_reward + jumlah_wisata * 100) / (total_distance + city_jump_penalty + 1)
+        fitness = (total_rating * 200 + city_reward + jumlah_wisata * 100) / (total_distance + city_jump_penalty + missing_city_penalty + 1)
         
         return fitness, itinerary, total_distance, current_day
 

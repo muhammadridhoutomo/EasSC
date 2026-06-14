@@ -34,8 +34,13 @@ class GeneticAlgorithm:
         self.open_mins = []
         self.close_mins = []
         for _, row in self.df.iterrows():
-            b_h, b_m = map(int, str(row[open_col]).split(':'))
-            t_h, t_m = map(int, str(row[close_col]).split(':'))
+            # Robust parsing: handle both HH:MM and HH:MM:SS
+            b_parts = str(row[open_col]).split(':')
+            t_parts = str(row[close_col]).split(':')
+            
+            b_h, b_m = int(b_parts[0]), int(b_parts[1])
+            t_h, t_m = int(t_parts[0]), int(t_parts[1])
+            
             self.open_mins.append(b_h * 60 + b_m)
             self.close_mins.append(t_h * 60 + t_m)
 
