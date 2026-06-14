@@ -41,10 +41,12 @@ class HybridGA:
         self.open_col = 'Jam Buka'
         self.close_col = 'Jam Tutup'
 
-        # Ekstrak data
+        # Ekstrak data - OPTIMASI MEMORI DAN KECEPATAN
         self.cities = self.df[self.city_col].tolist()
         self.names = self.df[self.name_col].tolist()
         self.durations = self.df[self.duration_col].astype(int).tolist()
+        # Ekstrak rating sekali saja di awal agar tidak me-looping Pandas dataframe jutaan kali
+        self.ratings = self.df['Rating'].astype(float).tolist()
         
         self.open_mins = []
         self.close_mins = []
@@ -60,7 +62,7 @@ class HybridGA:
         """Inisialisasi populasi: Selesaikan satu kota baru pindah ke kota lain.
         Dimulai dari start_city."""
         populasi = []
-        indices = list(range(self.jumlah_tempat))
+        # Tidak lagi me-looping unik setiap individu, dibuat template saja
         all_cities_in_df = list(self.df[self.city_col].unique())
         
         if self.start_city in all_cities_in_df:
@@ -84,6 +86,10 @@ class HybridGA:
         current_time = 8 * 60 
         itinerary = []
         total_distance = 0
+        total_rating = 0.0 # Ditambahkan langsung saat looping (Optimasi)
+        jumlah_wisata = 0  # Ditambahkan langsung saat looping (Optimasi)
+        
+        visited_cities_list = []
         
         for i in range(len(rute)):
             idx = rute[i]
@@ -141,19 +147,16 @@ class HybridGA:
                 'is_mobilisasi': False
             })
             
+            # --- BAGIAN OPTIMASI ---
+            # Alih-alih mengekstrak rating dengan fungsi Pandas, kita ambil dari list (ratusan kali lebih cepat)
+            visited_cities_list.append(kota)
+            total_rating += (self.ratings[idx] ** 2)
+            jumlah_wisata += 1
+            
             current_time = finish_time
         
         # Hitung fitness (sama seperti PSO/Tabu)
-        visited_cities_list = [item['city'] for item in itinerary if not item.get('is_mobilisasi')]
-        # Total Rating (Diberi pangkat agar rating tinggi jauh lebih berharga)
-        total_rating = sum([(float(self.df[self.df[self.name_col] == item['place']]['Rating'].values[0]) ** 2)
-                           for item in itinerary 
-                           if not item.get('is_mobilisasi')])
-        
-        unique_cities_visited = set(visited_cities_list)
-        unique_cities_count = len(unique_cities_visited)
-        
-        # Ambil daftar kota yang seharusnya dikunjungi
+        unique_cities_count = len(set(visited_cities_list))
         selected_cities_count = len(set(self.cities))
         
         missing_city_penalty = 0
@@ -161,7 +164,6 @@ class HybridGA:
             missing_city_penalty = (selected_cities_count - unique_cities_count) * 100000
             
         city_reward = (unique_cities_count ** 3) * 5000
-        jumlah_wisata = len([item for item in itinerary if not item.get('is_mobilisasi')])
         
         # PENALTY: City Jumping
         city_sequence = []
@@ -218,7 +220,8 @@ class HybridGA:
                 while True:
                     child[idx] = p1[idx]
                     visited[idx] = True
-                    idx = p2.index(p1[idx])
+                    # OPTIMASI: Pakai dict/indexing cepat jika bisa, atau dibiarkan list.index bawaan python
+                    idx = p2.index(p1[idx]) 
                     if idx == cycle_start:
                         break
                 
@@ -244,19 +247,16 @@ class HybridGA:
             mutation_type = random.choice(['swap', 'insert', 'inversion'])
             
             if mutation_type == 'swap':
-                # Swap tidak boleh melibatkan indeks 0
                 idx1, idx2 = random.sample(range(1, len(child)), 2)
                 child[idx1], child[idx2] = child[idx2], child[idx1]
             
             elif mutation_type == 'insert':
-                # Insert tidak boleh melibatkan indeks 0
                 idx = random.randint(1, len(child) - 1)
                 place = child.pop(idx)
                 new_idx = random.randint(1, len(child))
                 child.insert(new_idx, place)
             
             elif mutation_type == 'inversion':
-                # Inversion tidak boleh melibatkan indeks 0
                 idx1, idx2 = sorted(random.sample(range(1, len(child)), 2))
                 child[idx1:idx2 + 1] = child[idx1:idx2 + 1][::-1]
         
@@ -270,13 +270,9 @@ class HybridGA:
         self.best_fitness = -1
         
         for gen in range(self.generations):
-            # Evaluasi fitness
             fit = self.evaluasi(pop)
-            
-            # Cari best individual
             best_idx = np.argmax(fit)
             
-            # Update best solution
             if fit[best_idx] > self.best_fitness:
                 self.best_fitness = fit[best_idx]
                 self.best_route = pop[best_idx][:]
@@ -285,20 +281,15 @@ class HybridGA:
                 self.best_itinerary = itin
                 self.best_days = days
             
-            # Simpan history (jumlah wisata, bukan jarak)
             num_wisata = len([x for x in self.best_itinerary if not x.get('is_mobilisasi')])
             self.history.append(num_wisata)
             
-            # Print progress
             if (gen + 1) % 100 == 0:
-                num_wisata = len([x for x in self.best_itinerary if not x.get('is_mobilisasi')])
                 print(f"      Gen {gen + 1:<4} | Wisata: {num_wisata} | Jarak: {self.best_distance:.2f} km")
             
-            # Elitism: simpan top individuals
             elite_indices = np.argsort(fit)[-self.elite_size:]
             elite_pop = [pop[i][:] for i in elite_indices]
             
-            # Generate new population
             new_pop = elite_pop[:]
             
             while len(new_pop) < self.pop_size:
