@@ -18,11 +18,11 @@ class ACOAlgorithm:
         #ACO hyperparameters
         self.n_ants = n_ants
         self.iterations = iterations
-        self.alpha = alpha                  #bobot pheromone
-        self.beta = beta                    #bobot heuristic (rating/distance)
-        self.rho = rho                      #evaporation rate
-        self.q = q                          #konstanta deposit pheromone
-        self.elite_weight = elite_weight    #multiplier deposit untuk elite route
+        self.alpha = alpha
+        self.beta = beta
+        self.rho = rho
+        self.q = q
+        self.elite_weight = elite_weight
 
         self.jumlah_tempat = len(distance_matrix)
 
@@ -57,27 +57,24 @@ class ACOAlgorithm:
             self.open_mins.append(b_h * 60 + b_m)
             self.close_mins.append(t_h * 60 + t_m)
 
-        #Inisialisasi pheromone & heuristic matrix
         self.max_rating = max(self.ratings) if self.ratings else 1.0
         self._init_pheromone()
         self._init_heuristic()
 
-        #Cari kandidat start indices (tempat di start_city)
         self.start_indices = [i for i in range(self.jumlah_tempat)
                               if self.cities[i] == self.start_city]
         if not self.start_indices:
             self.start_indices = [0]
 
+        # Kota unik yang ada di dataset (dipakai untuk constraint coverage)
+        self.all_cities = set(self.cities)
+
     def _init_pheromone(self):
         base_pheromone = 1.0
         self.pheromone = np.ones((self.jumlah_tempat, self.jumlah_tempat)) * base_pheromone
-
-        #Bias dengan rating tempat tujuan
         for j in range(self.jumlah_tempat):
             rating_factor = self.ratings[j] / self.max_rating
             self.pheromone[:, j] *= rating_factor
-
-        #Tutup self-loop
         np.fill_diagonal(self.pheromone, 0.0)
 
     def _init_heuristic(self):
@@ -88,12 +85,64 @@ class ACOAlgorithm:
                     continue
                 dist = self.matrix[i][j]
                 if dist <= 0:
-                    dist = 0.1  #hindari division by zero/kasus jarak nol
+                    dist = 0.1
                 self.heuristic[i][j] = self.ratings[j] / dist
+
+    def _pick_by_aco(self, current, candidates):
+        """Pilih 1 tempat dari candidates berdasarkan probabilitas ACO."""
+        tau_row = self.pheromone[current]
+        eta_row = self.heuristic[current]
+        scores = np.array([
+            (tau_row[j] ** self.alpha) * (eta_row[j] ** self.beta)
+            for j in candidates
+        ])
+        total = scores.sum()
+        if total <= 0 or not np.isfinite(total):
+            return random.choice(candidates)
+        probs = scores / total
+        return int(np.random.choice(candidates, p=probs))
+
+    def _build_city_backbone(self, rute):
+        """
+        Susun ulang rute agar tiap kota mendapat 1 wakil di posisi awal,
+        urutan kota dipilih greedy nearest city dari start.
+        Sisa tempat diletakkan setelah backbone.
+        """
+        all_cities = self.all_cities
+        city_to_best = {}  # kota -> index terbaik (rating tertinggi) sebagai wakil
+
+        # Pilih wakil tiap kota: tempat dengan rating tertinggi di kota itu
+        for city in all_cities:
+            candidates = [j for j in rute if self.cities[j] == city]
+            if candidates:
+                city_to_best[city] = max(candidates, key=lambda j: self.ratings[j])
+
+        # Susun urutan kota: greedy nearest dari start
+        start = rute[0]
+        ordered_representatives = [start]
+        remaining_cities = all_cities - {self.cities[start]}
+        current = start
+
+        while remaining_cities:
+            best_city = min(
+                remaining_cities,
+                key=lambda city: self.matrix[current][city_to_best[city]]
+                if city in city_to_best else float('inf')
+            )
+            remaining_cities.remove(best_city)
+            if best_city in city_to_best:
+                rep = city_to_best[best_city]
+                ordered_representatives.append(rep)
+                current = rep
+
+        # Gabungkan: backbone dulu, lalu sisa
+        backbone_set = set(ordered_representatives)
+        rest = [j for j in rute if j not in backbone_set]
+        return ordered_representatives + rest
 
     def hitung_itinerary(self, rute):
         current_day = 1
-        current_time = 8 * 60  #Mulai jam 08:00
+        current_time = 8 * 60
         itinerary = []
         total_distance = 0
 
@@ -106,7 +155,6 @@ class ACOAlgorithm:
                 total_distance += travel_dist
                 travel_time = self.dur_matrix[rute[i-1]][idx]
 
-                #Tambahkan entri Mobilisasi
                 start_h, start_m = int(current_time // 60), int(current_time % 60)
                 end_time = current_time + travel_time
                 end_h, end_m = int(end_time // 60), int(end_time % 60)
@@ -136,9 +184,8 @@ class ACOAlgorithm:
 
             if finish_time > tutup_menit or finish_time > 21 * 60:
                 current_day += 1
-                current_time = 8 * 60  #Reset ke jam 08:00
+                current_time = 8 * 60
                 if current_day > self.max_days:
-                    #Hapus mobilisasi terakhir jika ada
                     if itinerary and itinerary[-1].get('is_mobilisasi'):
                         itinerary.pop()
                     break
@@ -163,40 +210,34 @@ class ACOAlgorithm:
             })
             current_time = finish_time
 
-        # --- HITUNG FITNESS BERDASARKAN RATING & DIVERSITAS KOTA ---
-        # 1. Total Rating (Diberi pangkat agar rating tinggi jauh lebih berharga)
-        total_rating = sum([(self.ratings[item['place_idx']] ** 2)
-                            for item in itinerary if not item.get('is_mobilisasi')])
-
-        # 2. Diversitas Kota & Penalti Kelengkapan
+        # --- HITUNG FITNESS BERTINGKAT (LEXICOGRAPHIC) ---
+        # Prioritas: 1) Semua kota dikunjungi (HARD), 2) Rating tinggi (SOFT)
         cities_visited_list = [item['city'] for item in itinerary if not item.get('is_mobilisasi')]
         cities_visited_unique = set(cities_visited_list)
         unique_cities_count = len(cities_visited_unique)
-        
-        # Ambil daftar kota yang seharusnya dikunjungi (dari dataset yang sudah difilter di app.py)
-        selected_cities_count = len(set(self.cities))
-        
-        missing_city_penalty = 0
+        selected_cities_count = len(self.all_cities)
+
+        # TIER 1: Hard elimination — rute yg skip kota = invalid
         if unique_cities_count < selected_cities_count:
-            missing_city_penalty = (selected_cities_count - unique_cities_count) * 100000
+            return 0.0, itinerary, total_distance, current_day  # fitness 0, BUKAN gradient
 
-        city_reward = (unique_cities_count ** 3) * 5000
+        # TIER 2: Semua kota lengkap → optimasi rating + jarak
+        total_rating = sum([(self.ratings[item['place_idx']] ** 2)
+                            for item in itinerary if not item.get('is_mobilisasi')])
 
-        # 3. Kuantitas Wisata
         jumlah_wisata = len([item for item in itinerary if not item.get('is_mobilisasi')])
 
-        # 4. PENALTY: City Jumping (kembali ke kota yang sudah ditinggalkan)
         city_sequence = []
         for c in cities_visited_list:
             if not city_sequence or c != city_sequence[-1]:
                 city_sequence.append(c)
-        
         city_jump_penalty = (len(city_sequence) - unique_cities_count) * 10000
 
-        fitness = (total_rating * 200 + city_reward + jumlah_wisata * 100) / (total_distance + city_jump_penalty + missing_city_penalty + 1)
+        # Optimasi
+        fitness = (total_rating * 500 + jumlah_wisata * 100) / (total_distance + city_jump_penalty + 1)
 
         return fitness, itinerary, total_distance, current_day
-
+    
     def construct_ant_route(self):
         # Mulai dari tempat random di start_city
         current = random.choice(self.start_indices)
@@ -204,43 +245,44 @@ class ACOAlgorithm:
         unvisited = set(range(self.jumlah_tempat))
         unvisited.remove(current)
 
+        covered_cities = {self.cities[current]}
+        remaining_cities = list(self.all_cities - covered_cities)
+
+        # === FASE 1: Wajib kunjungi 1 wakil per kota, urutan nearest city ===
+        while remaining_cities:
+            best_city = min(
+                remaining_cities,
+                key=lambda city: min(
+                    (self.matrix[current][j] for j in unvisited if self.cities[j] == city),
+                    default=float('inf')
+                )
+            )
+            remaining_cities.remove(best_city)
+            city_candidates = [j for j in unvisited if self.cities[j] == best_city]
+            if not city_candidates:
+                continue
+            next_place = self._pick_by_aco(current, city_candidates)
+            route.append(next_place)
+            unvisited.remove(next_place)
+            covered_cities.add(best_city)
+            current = next_place
+
+        # === FASE 2: Eksplorasi bebas sisa tempat ===
         while unvisited:
-            current_city = self.cities[current]
             candidates = list(unvisited)
-            
-            # PRIORITAS: Selesaikan kota saat ini sebelum pindah
-            same_city_candidates = [j for j in candidates if self.cities[j] == current_city]
-            
-            # Jika masih ada tempat di kota yang sama, paksa pilih dari situ
-            search_pool = same_city_candidates if same_city_candidates else candidates
-
-            # Hitung skor untuk search_pool
-            tau_row = self.pheromone[current]
-            eta_row = self.heuristic[current]
-
-            scores = np.array([
-                (tau_row[j] ** self.alpha) * (eta_row[j] ** self.beta)
-                for j in search_pool
-            ])
-
-            total = scores.sum()
-            if total <= 0 or not np.isfinite(total):
-                next_place = random.choice(search_pool)
-            else:
-                probs = scores / total
-                next_place = int(np.random.choice(search_pool, p=probs))
-
+            next_place = self._pick_by_aco(current, candidates)
             route.append(next_place)
             unvisited.remove(next_place)
             current = next_place
 
+        # === FASE 3: Susun ulang backbone agar kota tersebar di awal rute ===
+        route = self._build_city_backbone(route)
+
         return route
 
     def update_pheromone(self, all_routes, all_fitnesses):
-        #1. Evaporasi
         self.pheromone *= (1.0 - self.rho)
 
-        #2. Deposit dari semua semut (proportional ke fitness)
         max_fit = max(all_fitnesses) if all_fitnesses else 1.0
         if max_fit <= 0:
             max_fit = 1.0
@@ -250,19 +292,16 @@ class ACOAlgorithm:
                 continue
             normalized_fit = fitness / max_fit
             deposit = self.q * normalized_fit
-            #Deposit di edge yang dilalui semut
             for i in range(len(route) - 1):
                 a, b = route[i], route[i + 1]
                 self.pheromone[a][b] += deposit
 
-        #3. Elitist deposit: best route ever dapat deposit ekstra
         if self.best_route is not None and self.best_fitness > 0:
             elite_deposit = self.q * self.elite_weight
             for i in range(len(self.best_route) - 1):
                 a, b = self.best_route[i], self.best_route[i + 1]
                 self.pheromone[a][b] += elite_deposit
 
-        #4. Clip pheromone agar tidak meledak/menghilang (MMAS-style soft clip)
         np.clip(self.pheromone, 1e-6, 1e6, out=self.pheromone)
 
     def run(self):
@@ -274,7 +313,6 @@ class ACOAlgorithm:
             all_routes = []
             all_fitnesses = []
 
-            #Setiap semut bangun rute & dievaluasi
             for _ in range(self.n_ants):
                 route = self.construct_ant_route()
                 fitness, itin, dist, days = self.hitung_itinerary(route)
@@ -282,7 +320,6 @@ class ACOAlgorithm:
                 all_routes.append(route)
                 all_fitnesses.append(fitness)
 
-                #Update global best
                 if fitness > self.best_fitness:
                     self.best_fitness = fitness
                     self.best_route = list(route)
@@ -290,10 +327,8 @@ class ACOAlgorithm:
                     self.best_itinerary = itin
                     self.best_days = days
 
-            #Update pheromone setelah semua semut selesai (offline update)
             self.update_pheromone(all_routes, all_fitnesses)
 
-            #Catat history: jumlah wisata pada best route saat ini
             wisata_count = len([x for x in self.best_itinerary if not x.get('is_mobilisasi')])
             self.history.append(wisata_count)
 
