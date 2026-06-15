@@ -43,7 +43,7 @@ No,Nama Tempat,Kota,Latitude,Longitude,Jam Buka,Jam Tutup,Durasi Kunjungan (meni
 42,Masjid Agung Jami Malang,Malang,-7.9828123,112.6302456,0:00,23:59,30,4.6
 43,Indonesia Old Cinema Museum,Malang,-7.9612567,112.6156789,10:00,22:00,60,4.2
 44,Ijen Boulevard,Malang,-7.9665432,112.6191234,0:00,23:59,30,4.5
-45,Toko Oen Malang,Malang,-7.9774321,112.6295432,08:00:00,21:00:00,45,3.8
+45,Toko Oen Malang,Malang,-7.9774321,112.6295432,08:00,21:00,45,3.8
 46,Balai Kota Malang,Malang,-7.9785654,112.6310876,0:00,23:59,20,4.3
 47,Hotel Tugu Malang,Malang,-7.9774567,112.6312345,0:00,23:59,30,4.7
 48,Stasiun Kota Baru Malang,Malang,-7.9772345,112.6362456,0:00,23:59,20,4.4
@@ -52,30 +52,30 @@ No,Nama Tempat,Kota,Latitude,Longitude,Jam Buka,Jam Tutup,Durasi Kunjungan (meni
 51,Perpustakaan Kota Malang (Gedung Kolonial),Malang,-7.9717654,112.6204321,8:00,15:00,30,4.1
 52,Makam Bung Tomo,Surabaya,-7.2948123,112.7521345,8:00,16:00,30,4.3
 53,Pabrik Gula Candi Baru (Heritage),Malang,-7.9635432,112.6390876,8:00,15:00,45,4.1
-54,Museum Mpu Tantular,Sidoarjo,-7.4333832,112.7198449,08:00:00,15:00:00,90,4.5
-55,Candi Pari,Sidoarjo,-7.5161304,112.6833493,07:00:00,17:00:00,45,4.6
-56,Candi Dermo,Sidoarjo,-7.4076296,112.6199648,07:00:00,16:00:00,45,4.7
-57,Monumen Jayandaru,Sidoarjo,-7.4462862,112.7184411,00:00:00,23:59:00,30,4.6
-58,Candi Sumur,Sidoarjo,-7.5171596,112.6829219,07:00:00,16:00:00,45,4.3
-59,Candi Medalem,Sidoarjo,-7.4734051,112.657102,07:00:00,16:00:00,30,4.2
-60,Situs Wonokoyo,Sidoarjo,-7.4000382,112.6981846,07:00:00,16:00:00,30,4.7
-61,Rumah Budaya Sidoarjo,Sidoarjo,-7.4563579,112.7211891,08:00:00,16:00:00,60,4.8
-62,Kampung Batik Jetis,Sidoarjo,-7.4489231,112.7153456,08:00:00,17:00:00,60,4.4
-63,Candi Brahu,Mojokerto,-7.5429412,112.3744455,07:00:00,17:00:00,45,4.7
-64,Candi Tikus,Mojokerto,-7.571797,112.4035317,07:00:00,17:00:00,45,4.5
-65,Museum Majapahit Trowulan,Mojokerto,-7.5599311,112.380624,08:00:00,16:00:00,90,4.5
-66,Candi Bajang Ratu,Mojokerto,-7.5677157,112.398754,07:00:00,17:00:00,45,4.6
-67,Museum Gubug Wayang Mojokerto,Mojokerto,-7.4657004,112.4301962,09:00:00,17:00:00,90,4.7
-68,Gapura Wringin Lawang,Mojokerto,-7.541859,112.3909322,07:00:00,17:00:00,45,4.6
-69,Pendopo Agung Trowulan,Mojokerto,-7.5663119,112.3799457,07:00:00,17:00:00,45,4.5
-70,Kolam Segaran,Mojokerto,-7.5580556,112.3827778,00:00:00,23:59:00,45,4.5
-71,Makam Troloyo,Mojokerto,-7.5612345,112.3923456,00:00:00,23:59:00,45,4.8
-72,Masjid Agung Al Fattah Mojokerto,Mojokerto,-7.4701234,112.4341234,00:00:00,23:59:00,30,4.8
-73,Candi Kedaton (Sumur Upas),Mojokerto,-7.5703889,112.3853056,00:00:00,23:59:00,45,4.4
-74,Candi Bangkal,Mojokerto,-7.5687234,112.5012345,07:00:00,16:00:00,30,4.4
-75,Candi Jedong,Mojokerto,-7.5489123,112.5234567,00:00:00,23:59:00,45,4.6
-76,Candi Minak Jinggo,Mojokerto,-7.5572345,112.3912345,08:00:00,16:00:00,30,4.2
-77,Candi Gentong,Mojokerto,-7.5438912,112.3801234,07:00:00,16:00:00,30,4.5
-78,Candi Tawangalun,Sidoarjo,-7.3823456,112.7912345,07:00:00,16:00:00,30,4.3
-79,Candi Pamotan,Sidoarjo,-7.5234567,112.6712345,07:00:00,16:00:00,30,4.2
-80,Masjid Jami Al Abror,Sidoarjo,-7.4478901,112.7189012,00:00:00,23:59:00,30,4.7
+54,Museum Mpu Tantular,Sidoarjo,-7.4333832,112.7198449,08:00,15:00,90,4.5
+55,Candi Pari,Sidoarjo,-7.5161304,112.6833493,07:00,17:00,45,4.6
+56,Candi Dermo,Sidoarjo,-7.4076296,112.6199648,07:00,16:00,45,4.7
+57,Monumen Jayandaru,Sidoarjo,-7.4462862,112.7184411,00:00,23:59,30,4.6
+58,Candi Sumur,Sidoarjo,-7.5171596,112.6829219,07:00,16:00,45,4.3
+59,Candi Medalem,Sidoarjo,-7.4734051,112.657102,07:00,16:00,30,4.2
+60,Situs Wonokoyo,Sidoarjo,-7.4000382,112.6981846,07:00,16:00,30,4.7
+61,Rumah Budaya Sidoarjo,Sidoarjo,-7.4563579,112.7211891,08:00,16:00,60,4.8
+62,Kampung Batik Jetis,Sidoarjo,-7.4489231,112.7153456,08:00,17:00,60,4.4
+63,Candi Brahu,Mojokerto,-7.5429412,112.3744455,07:00,17:00,45,4.7
+64,Candi Tikus,Mojokerto,-7.571797,112.4035317,07:00,17:00,45,4.5
+65,Museum Majapahit Trowulan,Mojokerto,-7.5599311,112.380624,08:00,16:00,90,4.5
+66,Candi Bajang Ratu,Mojokerto,-7.5677157,112.398754,07:00,17:00,45,4.6
+67,Museum Gubug Wayang Mojokerto,Mojokerto,-7.4657004,112.4301962,09:00,17:00:,90,4.7
+68,Gapura Wringin Lawang,Mojokerto,-7.541859,112.3909322,07:00,17:00,45,4.6
+69,Pendopo Agung Trowulan,Mojokerto,-7.5663119,112.3799457,07:00,17:00,45,4.5
+70,Kolam Segaran,Mojokerto,-7.5580556,112.3827778,00:00,23:59,45,4.5
+71,Makam Troloyo,Mojokerto,-7.5612345,112.3923456,00:00,23:59,45,4.8
+72,Masjid Agung Al Fattah Mojokerto,Mojokerto,-7.4701234,112.4341234,00:00,23:59:,30,4.8
+73,Candi Kedaton (Sumur Upas),Mojokerto,-7.5703889,112.3853056,00:00,23:59,45,4.4
+74,Candi Bangkal,Mojokerto,-7.5687234,112.5012345,07:00,16:00,30,4.4
+75,Candi Jedong,Mojokerto,-7.5489123,112.5234567,00:00,23:59,45,4.6
+76,Candi Minak Jinggo,Mojokerto,-7.5572345,112.3912345,08:00,16:00,30,4.2
+77,Candi Gentong,Mojokerto,-7.5438912,112.3801234,07:00,16:00,30,4.5
+78,Candi Tawangalun,Sidoarjo,-7.3823456,112.7912345,07:00,16:00,30,4.3
+79,Candi Pamotan,Sidoarjo,-7.5234567,112.6712345,07:00,16:00,30,4.2
+80,Masjid Jami Al Abror,Sidoarjo,-7.4478901,112.7189012,00:00,23:59,30,4.7
