@@ -7,7 +7,7 @@ import os
 # Import algorithms
 from discrete_pso import PSOAlgorithm
 from tabu_search import TabuSearch
-from hybrid_GA import HybridGA
+from adaptive_GA import AdaptiveGA
 from ACO import ACOAlgorithm
 
 def run_detailed_benchmark():
@@ -23,7 +23,7 @@ def run_detailed_benchmark():
     print("Pilih Algoritma yang ingin dianalisis:")
     print("1. Discrete PSO (Particle Swarm Optimization)")
     print("2. Tabu Search")
-    print("3. Hybrid GA (Genetic Algorithm)")
+    print("3. Adaptive GA (Genetic Algorithm)")
     print("4. ACO (Ant Colony Optimization)")
 
     choice = input("\nMasukkan pilihan (1-4): ").strip()
@@ -39,7 +39,7 @@ def run_detailed_benchmark():
     algo_map = {
         '1': ("Discrete PSO", PSOAlgorithm),
         '2': ("Tabu Search", TabuSearch),
-        '3': ("Hybrid GA", HybridGA),
+        '3': ("Adaptive GA", AdaptiveGA),
         '4': ("ACO", ACOAlgorithm)
     }
 

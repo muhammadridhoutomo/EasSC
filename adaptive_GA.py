@@ -1,16 +1,8 @@
 import numpy as np
 import random
 
-class HybridGA:
-    """
-    Hybrid Genetic Algorithm - Standalone Implementation
-    Mencari rute optimal dengan:
-    - Elite preservation (elitism)
-    - Tournament selection
-    - Adaptive mutation rate
-    - Adaptive crossover (Order, Cycle)
-    Sama seperti PSO dan Tabu Search (dengan mobilisasi)
-    """
+class AdaptiveGA:
+    
     
     def __init__(self, name, df_lokasi, distance_matrix, duration_matrix, start_city='Surabaya', max_days=3, pop_size=200, generations=500, cx_rate=0.8, mut_rate=0.1, elite_size=20, tournament_size=3):
         self.name = name

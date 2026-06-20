@@ -10,7 +10,7 @@ import requests
 import matplotlib.pyplot as plt
 from discrete_pso import PSOAlgorithm
 from tabu_search import TabuSearch
-from hybrid_GA import HybridGA
+from adaptive_GA import AdaptiveGA
 from ACO import ACOAlgorithm
 
 # Set Page Config
@@ -30,7 +30,7 @@ df_new, matrix_new, dur_matrix_new = load_data()
 
 # --- 2. UI HEADER ---
 st.title("🗺️ Custom Travel Planner (Multi-Algorithm Comparison)")
-st.markdown("Bandingkan rute terbaik antara algoritma **Particle Swarm Optimization**, **Tabu Search**, **Hybrid Genetic Algorithm**, dan **Ant Colony Optimization** secara bersamaan.")
+st.markdown("Bandingkan rute terbaik antara algoritma **Particle Swarm Optimization**, **Tabu Search**, **Adaptive Genetic Algorithm**, dan **Ant Colony Optimization** secara bersamaan.")
 
 # --- 3. LOGIKA RESET ---
 def reset_results():
@@ -91,10 +91,10 @@ if run_button and start_city:
                          start_city=start_city, max_days=max_days, iterations=500)
         _, tabu_dist, tabu_itin, tabu_days = tabu.run()
         
-        # Jalankan Hybrid GA
-        hybrid_ga = HybridGA("Hybrid GA", df_filtered, matrix_filtered, dur_matrix_filtered,
+        # Jalankan Adaptive GA
+        adaptive_ga = AdaptiveGA("Adaptive GA", df_filtered, matrix_filtered, dur_matrix_filtered,
                             start_city=start_city, max_days=max_days, pop_size=200, generations=500)
-        _, hybrid_dist, hybrid_itin, hybrid_days = hybrid_ga.run()
+        _, adaptive_dist, adaptive_itin, adaptive_days = adaptive_ga.run()
 
         # Jalankan ACO
         aco = ACOAlgorithm("ACO", df_filtered, matrix_filtered, dur_matrix_filtered,
@@ -104,7 +104,7 @@ if run_button and start_city:
         st.session_state.results = {
             "PSO": {"itinerary": pso_itin, "distance": pso_dist, "history": pso.history, "color": "#EF476F"},
             "Tabu Search": {"itinerary": tabu_itin, "distance": tabu_dist, "history": tabu.history, "color": "#118AB2"},
-            "Hybrid GA": {"itinerary": hybrid_itin, "distance": hybrid_dist, "history": hybrid_ga.history, "color": "#06A77D"},
+            "Adaptive GA": {"itinerary": adaptive_itin, "distance": adaptive_dist, "history": adaptive_ga.history, "color": "#06A77D"},
             "ACO": {"itinerary": aco_itin, "distance": aco_dist, "history": aco.history, "color": "#FFD166"},
             "meta": {"city": start_city, "days": max_days, "cities_list": selected_cities},
             "df_used": df_filtered
@@ -121,7 +121,7 @@ if st.session_state.results:
     # 1. GRAFIK KONVERGENSI
     st.subheader("📈 Progress Optimasi")
     fig, ax = plt.subplots(figsize=(12, 3))
-    for name in ["PSO", "Tabu Search", "Hybrid GA", "ACO"]:
+    for name in ["PSO", "Tabu Search", "Adaptive GA", "ACO"]:
         ax.plot(results_map[name]["history"], label=name, color=results_map[name]["color"], linewidth=2)
     ax.set_ylabel('Jumlah Wisata')
     ax.legend()
@@ -131,8 +131,8 @@ if st.session_state.results:
     st.divider()
     selected_algos = st.multiselect(
         "🔍 **Pilih Algoritma yang ingin ditampilkan di Peta:**", 
-        ["PSO", "Tabu Search", "Hybrid GA", "ACO"], 
-        default=["PSO", "Tabu Search", "Hybrid GA", "ACO"]
+        ["PSO", "Tabu Search", "Adaptive GA", "ACO"], 
+        default=["PSO", "Tabu Search", "Adaptive GA", "ACO"]
     )
 
     if not selected_algos:
@@ -253,44 +253,44 @@ if st.session_state.results:
         # Ambil metrik perbandingan
         pso_res = results_map["PSO"]
         tabu_res = results_map["Tabu Search"]
-        hybrid_res = results_map["Hybrid GA"]
+        adaptive_res = results_map["Adaptive GA"]
         aco_res = results_map["ACO"]
         
         pso_count = len([x for x in pso_res["itinerary"] if not x.get('is_mobilisasi')])
         tabu_count = len([x for x in tabu_res["itinerary"] if not x.get('is_mobilisasi')])
-        hybrid_count = len([x for x in hybrid_res["itinerary"] if not x.get('is_mobilisasi')])
+        adaptive_count = len([x for x in adaptive_res["itinerary"] if not x.get('is_mobilisasi')])
         aco_count = len([x for x in aco_res["itinerary"] if not x.get('is_mobilisasi')])
 
         pso_dist = pso_res["distance"]
         tabu_dist = tabu_res["distance"]
-        hybrid_dist = hybrid_res["distance"]
+        adaptive_dist = adaptive_res["distance"]
         aco_dist = aco_res["distance"]
         
         # Hitung Rating
         pso_ratings = [float(df_new[df_new['Nama Tempat'] == x['place']]['Rating'].values[0]) for x in pso_res["itinerary"] if not x.get('is_mobilisasi')]
         tabu_ratings = [float(df_new[df_new['Nama Tempat'] == x['place']]['Rating'].values[0]) for x in tabu_res["itinerary"] if not x.get('is_mobilisasi')]
-        hybrid_ratings = [float(df_new[df_new['Nama Tempat'] == x['place']]['Rating'].values[0]) for x in hybrid_res["itinerary"] if not x.get('is_mobilisasi')]
+        adaptive_ratings = [float(df_new[df_new['Nama Tempat'] == x['place']]['Rating'].values[0]) for x in adaptive_res["itinerary"] if not x.get('is_mobilisasi')]
         aco_ratings = [float(df_new[df_new['Nama Tempat'] == x['place']]['Rating'].values[0]) for x in aco_res["itinerary"] if not x.get('is_mobilisasi')]
 
         pso_avg_rate = sum(pso_ratings)/len(pso_ratings) if pso_ratings else 0
         tabu_avg_rate = sum(tabu_ratings)/len(tabu_ratings) if tabu_ratings else 0
-        hybrid_avg_rate = sum(hybrid_ratings)/len(hybrid_ratings) if hybrid_ratings else 0
+        adaptive_avg_rate = sum(adaptive_ratings)/len(adaptive_ratings) if adaptive_ratings else 0
         aco_avg_rate = sum(aco_ratings)/len(aco_ratings) if aco_ratings else 0
 
         col_rec1, col_rec2 = st.columns(2)
         
         with col_rec1:
             st.markdown("**Metrik Perbandingan:**")
-            st.write(f"✅ **Jumlah Wisata**: PSO (**{pso_count}**) vs Tabu (**{tabu_count}**) vs Hybrid GA (**{hybrid_count}**) vs ACO (**{aco_count}**)")
-            st.write(f"📏 **Total Jarak**: PSO (**{pso_dist:.1f} km**) vs Tabu (**{tabu_dist:.1f} km**) vs Hybrid GA (**{hybrid_dist:.1f} km**) vs ACO (**{aco_dist:.1f} km**)")
-            st.write(f"⭐ **Rata-rata Rating**: PSO (**{pso_avg_rate:.2f}**) vs Tabu (**{tabu_avg_rate:.2f}**) vs Hybrid GA (**{hybrid_avg_rate:.2f}**) vs ACO (**{aco_avg_rate:.2f}**)")
+            st.write(f"✅ **Jumlah Wisata**: PSO (**{pso_count}**) vs Tabu (**{tabu_count}**) vs Adaptive GA (**{adaptive_count}**) vs ACO (**{aco_count}**)")
+            st.write(f"📏 **Total Jarak**: PSO (**{pso_dist:.1f} km**) vs Tabu (**{tabu_dist:.1f} km**) vs Adaptive GA (**{adaptive_dist:.1f} km**) vs ACO (**{aco_dist:.1f} km**)")
+            st.write(f"⭐ **Rata-rata Rating**: PSO (**{pso_avg_rate:.2f}**) vs Tabu (**{tabu_avg_rate:.2f}**) vs Adaptive GA (**{adaptive_avg_rate:.2f}**) vs ACO (**{aco_avg_rate:.2f}**)")
 
         with col_rec2:
             # Logika Penentuan Pemenang dengan 4 algoritma
             algos = {
                 "PSO": (pso_count, pso_dist, pso_avg_rate),
                 "Tabu Search": (tabu_count, tabu_dist, tabu_avg_rate),
-                "Hybrid GA": (hybrid_count, hybrid_dist, hybrid_avg_rate),
+                "Adaptive GA": (adaptive_count, adaptive_dist, adaptive_avg_rate),
                 "ACO": (aco_count, aco_dist, aco_avg_rate)
             }
             
@@ -301,8 +301,8 @@ if st.session_state.results:
                 winner = "Particle Swarm Optimization (PSO)"
             elif winner_name == "Tabu Search":
                 winner = "Tabu Search"
-            elif winner_name == "Hybrid GA":
-                winner = "Hybrid Genetic Algorithm (GA)"
+            elif winner_name == "Adaptive GA":
+                winner = "Adaptive Genetic Algorithm (GA)"
             else:
                 winner = "Ant Colony Optimization (ACO)"
 

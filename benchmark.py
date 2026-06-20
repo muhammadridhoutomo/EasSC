@@ -7,7 +7,7 @@ import os
 # Import algorithms
 from discrete_pso import PSOAlgorithm
 from tabu_search import TabuSearch
-from hybrid_GA import HybridGA
+from adaptive_GA import AdaptiveGA
 from ACO import ACOAlgorithm
 
 # --- 1. LOAD DATA ---
@@ -26,7 +26,7 @@ GENERATIONS = 200 # Using 200 for faster execution while maintaining comparabili
 algorithm_classes = [
     ("Discrete PSO", PSOAlgorithm),
     ("Tabu Search", TabuSearch),
-    ("Hybrid GA", HybridGA),
+    ("Adaptive GA", AdaptiveGA),
     ("ACO", ACOAlgorithm)
 ]
 
