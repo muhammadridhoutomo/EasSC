@@ -102,10 +102,10 @@ if run_button and start_city:
         _, aco_dist, aco_itin, aco_days = aco.run()
 
         st.session_state.results = {
-            "PSO": {"itinerary": pso_itin, "distance": pso_dist, "history": pso.history, "color": "#EF476F"},
-            "Tabu Search": {"itinerary": tabu_itin, "distance": tabu_dist, "history": tabu.history, "color": "#118AB2"},
-            "Hybrid GA": {"itinerary": hybrid_itin, "distance": hybrid_dist, "history": hybrid_ga.history, "color": "#06A77D"},
-            "ACO": {"itinerary": aco_itin, "distance": aco_dist, "history": aco.history, "color": "#FFD166"},
+            "PSO": {"itinerary": pso_itin, "distance": pso_dist, "history": pso.history, "color": "#B71C1C"},
+            "Tabu Search": {"itinerary": tabu_itin, "distance": tabu_dist, "history": tabu.history, "color": "#0D47A1"},
+            "Hybrid GA": {"itinerary": hybrid_itin, "distance": hybrid_dist, "history": hybrid_ga.history, "color": "#1B5E20"},
+            "ACO": {"itinerary": aco_itin, "distance": aco_dist, "history": aco.history, "color": "#8D6E63"},
             "meta": {"city": start_city, "days": max_days, "cities_list": selected_cities},
             "df_used": df_filtered
         }
@@ -139,7 +139,11 @@ if st.session_state.results:
         st.warning("Pilih minimal satu algoritma untuk melihat rute di peta.")
     else:
         # 3. VISUALISASI PETA (MULTI-LAYER)
-        peta = folium.Map(location=[-7.6, 112.5], zoom_start=9)
+        peta = folium.Map(
+            location=[-7.6, 112.5],
+            zoom_start=9,
+            tiles="CartoDB positron"
+        )
         warna_kota = {
             'Surabaya': ('#d32f2f', '#ffcdd2'),  'Sidoarjo': ('#1976d2', '#bbdefb'),  
             'Mojokerto': ('#388e3c', '#c8e6c9'), 'Malang': ('#f57c00', '#ffe0b2'),
@@ -176,7 +180,12 @@ if st.session_state.results:
                         else: full_geom.extend([[c1[0], c1[1]], [c2[0], c2[1]]])
                     except: full_geom.extend([[c1[0], c1[1]], [c2[0], c2[1]]])
                 
-                folium.PolyLine(full_geom, color=data_view["color"], weight=5, opacity=0.8).add_to(fg)
+                folium.PolyLine(
+                    full_geom,
+                    color=data_view["color"],
+                    weight=7,
+                    opacity=1.0
+                ).add_to(fg)
 
                 wisata_idx = 1
                 for item in itin:

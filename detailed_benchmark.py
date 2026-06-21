@@ -77,6 +77,7 @@ def run_detailed_benchmark():
     # --- 2. HITUNG STATISTIK ---
     best_dist = np.min(distances)
     avg_dist = np.mean(distances)
+    median_dist = np.median(distances)
     std_dist = np.std(distances)
     avg_time = np.mean(runtimes)
 
@@ -85,8 +86,9 @@ def run_detailed_benchmark():
     print("="*50)
     print(f"1. Nilai Terbaik (Minimum) : {best_dist:.2f} km")
     print(f"2. Nilai Rata-rata Jarak   : {avg_dist:.2f} km")
-    print(f"3. Standar Deviasi Jarak   : {std_dist:.2f}")
-    print(f"4. Rata-rata Running Time  : {avg_time:.2f} detik")
+    print(f"3. Nilai Median Jarak      : {median_dist:.2f} km")
+    print(f"4. Standar Deviasi Jarak   : {std_dist:.2f}")
+    print(f"5. Rata-rata Running Time  : {avg_time:.2f} detik")
     print("="*50)
 
     # --- 3. VISUALISASI ---
@@ -95,6 +97,7 @@ def run_detailed_benchmark():
     # Plot 1: Jarak per Run
     ax1.plot(range(1, 11), distances, marker='o', linestyle='-', color='b', label='Jarak tiap Run')
     ax1.axhline(avg_dist, color='r', linestyle='--', label=f'Rata-rata ({avg_dist:.2f})')
+    ax1.axhline(median_dist, color='g', linestyle='-.', label=f'Median ({median_dist:.2f})')
     ax1.set_title(f'Stabilitas Jarak {name} (10 Run)')
     ax1.set_xlabel('Run ke-')
     ax1.set_ylabel('Jarak (km)')
