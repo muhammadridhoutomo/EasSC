@@ -6,7 +6,7 @@ import os
 # Import algorithms
 from discrete_pso import PSOAlgorithm
 from tabu_search import TabuSearch
-from hybrid_GA import HybridGA
+from adaptive_GA import AdaptiveGA
 from ACO import ACOAlgorithm
 
 def run_individual_algo():
@@ -22,7 +22,7 @@ def run_individual_algo():
     print("Pilih Algoritma:")
     print("1. PSO (Particle Swarm Optimization)")
     print("2. Tabu Search")
-    print("3. Hybrid GA (Genetic Algorithm)")
+    print("3. Adaptive GA (Genetic Algorithm)")
     print("4. ACO (Ant Colony Optimization)")
     
     choice = input("\nMasukkan pilihan (1-4): ")
@@ -37,7 +37,7 @@ def run_individual_algo():
     elif choice == '2':
         algo = TabuSearch("Tabu Search", df_new, matrix_new, dur_matrix_new, start_city=start_city, max_days=max_days, iterations=iters)
     elif choice == '3':
-        algo = HybridGA("Hybrid GA", df_new, matrix_new, dur_matrix_new, start_city=start_city, max_days=max_days, generations=iters)
+        algo = AdaptiveGA("Adaptive GA", df_new, matrix_new, dur_matrix_new, start_city=start_city, max_days=max_days, generations=iters)
     elif choice == '4':
         algo = ACOAlgorithm("ACO", df_new, matrix_new, dur_matrix_new, start_city=start_city, max_days=max_days, iterations=iters)
     else:

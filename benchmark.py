@@ -7,7 +7,7 @@ import os
 # Import algorithms
 from discrete_pso import PSOAlgorithm
 from tabu_search import TabuSearch
-from hybrid_GA import HybridGA
+from adaptive_GA import AdaptiveGA
 from ACO import ACOAlgorithm
 
 # --- 1. LOAD DATA ---
@@ -26,7 +26,7 @@ GENERATIONS = 200 # Using 200 for faster execution while maintaining comparabili
 algorithm_classes = [
     ("Discrete PSO", PSOAlgorithm),
     ("Tabu Search", TabuSearch),
-    ("Hybrid GA", HybridGA),
+    ("Adaptive GA", AdaptiveGA),
     ("ACO", ACOAlgorithm)
 ]
 
@@ -69,6 +69,7 @@ for name in all_results:
         "Algorithm": name,
         "Best (Min) Distance": np.min(dists),
         "Avg Distance": np.mean(dists),
+        "Median Distance": np.median(dists),
         "Std Dev Distance": np.std(dists),
         "Avg Run Time (s)": np.mean(times)
     }
@@ -86,10 +87,11 @@ fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
 
 # Plot 1: Distance Comparison
 x = np.arange(len(df_stats))
-width = 0.35
+width = 0.25
 
-ax1.bar(x - width/2, df_stats["Best (Min) Distance"], width, label='Best (Min)', color='#06D6A0')
-ax1.bar(x + width/2, df_stats["Avg Distance"], width, label='Average', color='#118AB2')
+ax1.bar(x - width, df_stats["Best (Min) Distance"], width, label='Best (Min)', color='#1B5E20')
+ax1.bar(x, df_stats["Avg Distance"], width, label='Average', color='#0D47A1')
+ax1.bar(x + width, df_stats["Median Distance"], width, label='Median', color='#8D6E63')
 ax1.set_xticks(x)
 ax1.set_xticklabels(df_stats["Algorithm"])
 ax1.set_ylabel('Total Distance (km)')
