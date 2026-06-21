@@ -235,8 +235,6 @@ class PSOAlgorithm(GeneticAlgorithm):
                 p.position = self.apply_swaps(p.position, ss_gbest, prob_gbest)
 
                 if random.random() < 0.1:
-                    # Mutasi acak tapi jangan ganggu indeks pertama (kota start) jika ingin konsisten
-                    # Tapi PSO biasanya bebas, yang penting evaluasi rutenya tetap efisien
                     idx1, idx2 = random.sample(range(len(p.position)), 2)
                     p.position[idx1], p.position[idx2] = p.position[idx2], p.position[idx1]
 
